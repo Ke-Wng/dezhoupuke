@@ -2368,7 +2368,17 @@ function renderGame(state) {
   prevPot = state.pot;
   for (const p of state.players) prevActions[p.id] = p.lastAction;
 
-  table.querySelectorAll('.seat,.dealer-btn,.blind-btn').forEach(el => el.remove());
+  // Only remove seats/dealer/blinds if player count changed (prevents flickering)
+  const existingSeats = table.querySelectorAll('.seat');
+  const playerCountChanged = existingSeats.length !== state.players.length ||
+    [...existingSeats].some((el, i) => el.dataset.playerId !== state.players[i]?.id);
+
+  if (playerCountChanged) {
+    table.querySelectorAll('.seat,.dealer-btn,.blind-btn').forEach(el => el.remove());
+  } else {
+    // Only remove dealer and blind buttons (they get repositioned)
+    table.querySelectorAll('.dealer-btn,.blind-btn').forEach(el => el.remove());
+  }
 
   const me_ = state.players.find(p => p.id === Net.playerId);
   const isMyTurn = me_ && state.currentIdx !== undefined && state.players[state.currentIdx] &&
@@ -2405,103 +2415,152 @@ function renderGame(state) {
 
   // Seats
   state.players.forEach((p, i) => {
-    const seat = document.createElement('div');
-    seat.className = `seat seat-${i}`;
-    seat.dataset.playerId = p.id;
-    if (p.folded) seat.classList.add('folded');
-    if (!p.connected) seat.classList.add('disconnected');
-    if (state.currentIdx === i && state.phase !== 'showdown' && state.phase !== 'idle') seat.classList.add('active');
-    if (p.lastAction === 'winner') seat.classList.add('winner');
+    let seat = table.querySelector(`.seat-${i}`);
+    const seatExisted = seat && !playerCountChanged;
 
-    const cardsDiv = document.createElement('div');
-    if (p.id === Net.playerId) cardsDiv.className = 'my-hand';
-    else cardsDiv.className = 'seat-cards';
-
-    if (p.id === Net.playerId) {
-      for (const card of (p.hand || [])) {
-        if (card) {
-          const el = createCardEl(card);
-          if (myHandChanged) el.classList.add('seat-card-deal');
-          cardsDiv.appendChild(el);
-        }
-      }
-    } else if (p.hand && p.hand[0]) {
-      // Other player's visible cards — only flip-animate when first revealed
-      const otherIds = p.hand.filter(c => c).map(c => c.suit + '-' + c.rank).join(',');
-      const otherChanged = otherIds !== (window._prevOtherHands[p.id] || '');
-      for (const card of p.hand) {
-        const el = card ? createCardEl(card) : createCardBackEl();
-        if (otherChanged) el.classList.add('card-flip-in');
-        cardsDiv.appendChild(el);
-      }
-      window._prevOtherHands[p.id] = otherIds;
-    } else if (!p.folded && state.phase !== 'idle') {
-      // Card backs — only animate on first deal (phase changed from idle)
-      const otherBackKey = p.id + '-backs';
-      const backsChanged = !window._prevOtherHands[otherBackKey];
-      for (let j = 0; j < 2; j++) {
-        const el = createCardBackEl();
-        if (backsChanged) {
-          el.classList.add('seat-card-deal');
-          el.style.animationDelay = `${j * 0.15}s`;
-        }
-        cardsDiv.appendChild(el);
-      }
-      window._prevOtherHands[otherBackKey] = true;
+    if (!seatExisted) {
+      seat = document.createElement('div');
+      seat.className = `seat seat-${i}`;
+      seat.dataset.playerId = p.id;
     }
 
-    const info = document.createElement('div');
-    info.className = 'seat-info';
-    // Player color for this seat
+    // Update classes
+    seat.classList.toggle('folded', !!p.folded);
+    seat.classList.toggle('disconnected', !p.connected);
+    seat.classList.toggle('active', state.currentIdx === i && state.phase !== 'showdown' && state.phase !== 'idle');
+    seat.classList.toggle('winner', p.lastAction === 'winner');
+
+    const cardsDiv = seatExisted
+      ? (p.id === Net.playerId
+          ? (seat.querySelector('.my-hand') || table.parentNode.querySelector(':scope > .my-hand'))
+          : seat.querySelector('.seat-cards'))
+      : null;
+    const existingInfo = seatExisted ? seat.querySelector('.seat-info') : null;
+
+    // Rebuild cards only if seat is new or cards changed
+    let cardsEl = cardsDiv;
+    // For other players: compute card signature to detect changes
+    let otherCardSig = '';
+    if (p.id !== Net.playerId) {
+      if (p.hand && p.hand[0]) {
+        otherCardSig = 'f:' + p.hand.filter(c => c).map(c => c.suit + '-' + c.rank).join(',');
+      } else if (!p.folded && state.phase !== 'idle') {
+        otherCardSig = 'b:2';
+      } else {
+        otherCardSig = 'e';
+      }
+    }
+    const otherCardsChanged = p.id !== Net.playerId ? otherCardSig !== (window._prevOtherHands[p.id] || '') : false;
+    const needsCardRebuild = !cardsEl || (p.id === Net.playerId ? myHandChanged : otherCardsChanged);
+    if (needsCardRebuild) {
+      if (cardsEl) cardsEl.remove();
+      cardsEl = document.createElement('div');
+      if (p.id === Net.playerId) cardsEl.className = 'my-hand';
+      else cardsEl.className = 'seat-cards';
+
+      if (p.id === Net.playerId) {
+        for (const card of (p.hand || [])) {
+          if (card) {
+            const el = createCardEl(card);
+            if (myHandChanged) el.classList.add('seat-card-deal');
+            cardsEl.appendChild(el);
+          }
+        }
+      } else if (p.hand && p.hand[0]) {
+        const isNew = !cardsDiv;
+        for (const card of p.hand) {
+          const el = card ? createCardEl(card) : createCardBackEl();
+          if (isNew || otherCardsChanged) el.classList.add('card-flip-in');
+          cardsEl.appendChild(el);
+        }
+      } else if (!p.folded && state.phase !== 'idle') {
+        const isNew = !cardsDiv;
+        for (let j = 0; j < 2; j++) {
+          const el = createCardBackEl();
+          if (isNew || otherCardsChanged) {
+            el.classList.add('seat-card-deal');
+            el.style.animationDelay = `${j * 0.15}s`;
+          }
+          cardsEl.appendChild(el);
+        }
+      }
+      // Store signature after rebuild
+      if (p.id !== Net.playerId) window._prevOtherHands[p.id] = otherCardSig;
+    }
+
+    // Player color and avatar
     const seatColor = p.avatarColor || PLAYER_COLORS[i % PLAYER_COLORS.length];
     const seatAvatar = p.avatar || PLAYER_AVATARS[i % PLAYER_AVATARS.length];
 
-    // Apply player color to seat-info
-    info.style.borderLeftWidth = '3px';
-    info.style.borderLeftStyle = 'solid';
-    info.style.borderLeftColor = seatColor;
-    const isActive_ = state.currentIdx === i && state.phase !== 'showdown' && state.phase !== 'idle';
-    if (isActive_) {
-      info.style.borderColor = seatColor;
-      info.style.borderLeftColor = seatColor;
-      info.style.boxShadow = `0 0 20px ${seatColor}66, 0 0 40px ${seatColor}33`;
-    }
-    if (p.lastAction === 'winner') {
-      info.style.borderColor = '#40e080';
-      info.style.boxShadow = '0 0 24px rgba(64,224,128,0.4)';
-    }
-
+    // Update info (always update - it's lightweight innerHTML change)
     const actionMap = {fold:'弃牌',check:'过牌',call:'跟注',raise:'加注',allin:'ALL IN',winner:'🏆 WIN'};
     const actionClass = p.lastAction ? `act-${p.lastAction}` : '';
-    info.innerHTML = `
+    const isActive_ = state.currentIdx === i && state.phase !== 'showdown' && state.phase !== 'idle';
+
+    let infoEl = existingInfo;
+    if (!infoEl) {
+      infoEl = document.createElement('div');
+      infoEl.className = 'seat-info';
+    }
+    infoEl.style.borderLeftWidth = '3px';
+    infoEl.style.borderLeftStyle = 'solid';
+    infoEl.style.borderLeftColor = seatColor;
+    if (isActive_) {
+      infoEl.style.borderColor = seatColor;
+      infoEl.style.borderLeftColor = seatColor;
+      infoEl.style.boxShadow = `0 0 20px ${seatColor}66, 0 0 40px ${seatColor}33`;
+    } else if (p.lastAction === 'winner') {
+      infoEl.style.borderColor = '#40e080';
+      infoEl.style.boxShadow = '0 0 24px rgba(64,224,128,0.4)';
+    } else {
+      infoEl.style.boxShadow = 'none';
+      infoEl.style.borderColor = '';
+    }
+    infoEl.innerHTML = `
       <div class="seat-name" style="color:${seatColor}"><span style="color:${seatColor}">●</span> ${seatAvatar} ${p.name}${p.isBot?' <span class="bot-badge">BOT</span>':''}${p.id===Net.playerId?' (你)':''}<span class="voice-indicator" id="voice-ind-${p.id}" style="display:none"></span></div>
       <div class="seat-stack">${p.stack}</div>
       <div class="seat-action ${actionClass} ${p.lastAction ? 'seat-action-anim' : ''}">${actionMap[p.lastAction]||''}</div>
     `;
 
-    if (p.id === Net.playerId) { seat.appendChild(cardsDiv); seat.appendChild(info); }
-    else {
-      seat.appendChild(info); seat.appendChild(cardsDiv);
-      // Add interact trigger button for other players
-      const trigBtn = document.createElement('div');
-      trigBtn.className = 'interact-trigger';
-      trigBtn.textContent = '😊';
-      trigBtn.style.right = '4px'; trigBtn.style.top = '50%'; trigBtn.style.transform = 'translateY(-50%)';
-      trigBtn.addEventListener('click', (e) => { e.stopPropagation(); showInteractPanel(p.id, seat); });
-      seat.appendChild(trigBtn);
-      // Show on hover (desktop) or always on mobile
-      if (window.innerWidth > 700) { seat.style.position = 'relative'; trigBtn.style.display = 'none'; seat.addEventListener('mouseenter', () => trigBtn.style.display = 'flex'); seat.addEventListener('mouseleave', () => { if (!interactPanel.classList.contains('active')) trigBtn.style.display = 'none'; }); }
-      else { trigBtn.style.display = 'flex'; }
+    // Assemble seat if new
+    if (!seatExisted) {
+      if (p.id === Net.playerId) { seat.appendChild(cardsEl); seat.appendChild(infoEl); }
+      else {
+        seat.appendChild(infoEl); seat.appendChild(cardsEl);
+        // Add interact trigger button for other players
+        const trigBtn = document.createElement('div');
+        trigBtn.className = 'interact-trigger';
+        trigBtn.textContent = '😊';
+        trigBtn.style.right = '4px'; trigBtn.style.top = '50%'; trigBtn.style.transform = 'translateY(-50%)';
+        trigBtn.addEventListener('click', (e) => { e.stopPropagation(); showInteractPanel(p.id, seat); });
+        seat.appendChild(trigBtn);
+        if (window.innerWidth > 700) { seat.style.position = 'relative'; trigBtn.style.display = 'none'; seat.addEventListener('mouseenter', () => trigBtn.style.display = 'flex'); seat.addEventListener('mouseleave', () => { if (!interactPanel.classList.contains('active')) trigBtn.style.display = 'none'; }); }
+        else { trigBtn.style.display = 'flex'; }
+      }
+    } else {
+      // Seat existed — re-append rebuilt elements if needed
+      if (needsCardRebuild && cardsEl) seat.appendChild(cardsEl);
+      if (!existingInfo && infoEl) seat.insertBefore(infoEl, seat.firstChild);
     }
 
+    // Bet display
+    const existingBet = seat.querySelector('.seat-bet');
     if (p.bet > 0) {
-      const bet = document.createElement('div');
-      bet.className = 'seat-bet chip-fly';
-      bet.textContent = p.bet;
-      seat.appendChild(bet);
-      SFX.chip();
+      if (existingBet && existingBet.textContent == p.bet) {
+        // Bet unchanged — do nothing
+      } else {
+        if (existingBet) existingBet.remove();
+        const bet = document.createElement('div');
+        bet.className = 'seat-bet chip-fly';
+        bet.textContent = p.bet;
+        seat.appendChild(bet);
+        SFX.chip();
+      }
+    } else if (existingBet) {
+      existingBet.remove();
     }
-    table.appendChild(seat);
+
+    if (!seatExisted) table.appendChild(seat);
   });
 
   // Move my hand cards outside the table (fixed at bottom of screen, Dou Dizhu style)
