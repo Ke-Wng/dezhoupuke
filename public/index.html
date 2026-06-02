@@ -2534,7 +2534,7 @@ function renderGame(state) {
         trigBtn.style.right = '4px'; trigBtn.style.top = '50%'; trigBtn.style.transform = 'translateY(-50%)';
         trigBtn.addEventListener('click', (e) => { e.stopPropagation(); showInteractPanel(p.id, seat); });
         seat.appendChild(trigBtn);
-        if (window.innerWidth > 700) { seat.style.position = 'relative'; trigBtn.style.display = 'none'; seat.addEventListener('mouseenter', () => trigBtn.style.display = 'flex'); seat.addEventListener('mouseleave', () => { if (!interactPanel.classList.contains('active')) trigBtn.style.display = 'none'; }); }
+        if (window.innerWidth > 700) { trigBtn.style.display = 'none'; seat.addEventListener('mouseenter', () => trigBtn.style.display = 'flex'); seat.addEventListener('mouseleave', () => { if (!interactPanel.classList.contains('active')) trigBtn.style.display = 'none'; }); }
         else { trigBtn.style.display = 'flex'; }
       }
     } else {
@@ -2586,7 +2586,6 @@ function renderGame(state) {
     if (sbSeat) {
       const sbBtn = document.createElement('div'); sbBtn.className = 'blind-btn blind-sb'; sbBtn.textContent = 'SB';
       sbBtn.style.position = 'absolute'; sbBtn.style.top = '-8px'; sbBtn.style.right = '-4px';
-      sbSeat.style.position = 'relative';
       sbSeat.appendChild(sbBtn);
     }
   }
@@ -2597,7 +2596,6 @@ function renderGame(state) {
     if (bbSeat) {
       const bbBtn = document.createElement('div'); bbBtn.className = 'blind-btn blind-bb'; bbBtn.textContent = 'BB';
       bbBtn.style.position = 'absolute'; bbBtn.style.top = '-8px'; bbBtn.style.right = '-4px';
-      bbSeat.style.position = 'relative';
       bbSeat.appendChild(bbBtn);
     }
   }
