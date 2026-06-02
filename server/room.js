@@ -54,6 +54,8 @@ class Room {
       stack: this.startStack,
       ready: false,
       connected: true,
+      avatar: ws._playerAvatar || '🦊',
+      avatarColor: ws._playerColor || null,
     });
 
     this.broadcast('room:playerJoined', {
@@ -138,6 +140,7 @@ class Room {
     const players = [...this.players.values()].map(p => ({
       id: p.id, name: p.name, stack: p.stack, ready: p.ready, connected: p.connected,
       isBot: !!p.isBot, botStyle: p.botStyle || null,
+      avatar: p.avatar || '🦊', avatarColor: p.avatarColor || null,
     }));
     const spectators = [...this.spectators.values()].map(s => ({ id: s.id, name: s.name }));
     ws.send(JSON.stringify({ type: 'room:players', data: { players, spectators, hostId: this.hostId } }));
@@ -246,6 +249,8 @@ class Room {
       isBot: !!p.isBot,
       botStyle: p.botStyle || null,
       _username: p._username || null,
+      avatar: p.avatar || '🦊',
+      avatarColor: p.avatarColor || null,
     }));
 
     this.game = new Game(gamePlayers, {
@@ -293,9 +298,10 @@ class Room {
         this.onStatsReport(this.game);
       }
 
+      this.broadcast('game:waitingForNext', { nextHandDelay: 15 });
       this.nextHandTimer = setTimeout(() => {
         if (this.players.size >= 2) this.startGame(this.hostId);
-      }, 5000);
+      }, 15000);
     };
 
     // Wire up player websockets
@@ -374,6 +380,7 @@ class Room {
     const players = [...this.players.values()].map(p => ({
       id: p.id, name: p.name, stack: p.stack, ready: p.ready, connected: p.connected,
       isBot: !!p.isBot, botStyle: p.botStyle || null,
+      avatar: p.avatar || '🦊', avatarColor: p.avatarColor || null,
     }));
     const spectators = [...this.spectators.values()].map(s => ({
       id: s.id, name: s.name,

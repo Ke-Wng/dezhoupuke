@@ -123,6 +123,8 @@ class Game {
       isBot: !!p.isBot,
       botStyle: p.botStyle || null,
       _username: p._username || null,
+      avatar: p.avatar || '🦊',
+      avatarColor: p.avatarColor || null,
     }));
     this.deck = [];
     this.community = [];
@@ -167,6 +169,7 @@ class Game {
         stack: p.stack, bet: p.bet, totalBet: p.totalBet,
         folded: p.folded, allIn: p.allIn, lastAction: p.lastAction,
         connected: p.connected,
+        avatar: p.avatar || '🦊', avatarColor: p.avatarColor || null,
         // Only send hand cards to the owning player (handled per-client)
         hand: p.hand,
       })),
@@ -452,11 +455,6 @@ class Game {
     if (player._ws && player._ws.readyState === 1) {
       player._ws.send(JSON.stringify({ type: 'game:yourTurn', data: actionData }));
     }
-
-    // Auto-fold timeout (30 seconds) - disabled
-    // this.actionTimeout = setTimeout(() => {
-    //   this.handleAction(player.id, { action: 'fold' });
-    // }, 30000);
   }
 
   handleAction(playerId, actionData) {

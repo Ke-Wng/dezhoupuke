@@ -2,11 +2,11 @@
 
 ### 项目概况
 
-在线多人德州扑克游戏，支持 2-6 人联机 + AI 人机对战，5 种玩法模式（经典/急速/短牌/高额/All-in Fold），含 WebRTC 语音聊天、成就系统、排行榜。
+在线多人德州扑克游戏，支持 2-6 人联机 + AI 人机对战，5 种玩法模式（经典/急速/短牌/高额/All-in Fold），含 WebRTC 语音聊天、成就系统、排行榜、每日签到、筹码经济、角色换装、10个赌桌场景、占卜塔罗牌。
 
 ### 技术架构
 
-前端：单文件 SPA，全部 HTML/CSS/JS 内联在 `public/index.html`（约 2574 行），无构建工具，无框架，原生 JS + WebSocket。
+前端：单文件 SPA，全部 HTML/CSS/JS 内联在 `public/index.html`（约 3000+ 行），无构建工具，无框架，原生 JS + WebSocket。
 后端：Node.js，纯 WebSocket 服务（ws 包，无 Express），进程用 PM2 管理。
 文件结构：
 ```
@@ -14,9 +14,9 @@
 ├── public/index.html        ← 唯一前端文件
 ├── server/
 │   ├── index.js             ← WebSocket 服务器 + 消息路由
-│   ├── room.js              ← 房间管理（创建/加入/离开/状态）
-│   ├── game.js              ← 游戏引擎（发牌/下注/摊牌/_bot AI 用蒙特卡洛模拟）
-│   └── userStore.js         ← 用户持久化（JSON 文件，含注册/登录/统计/成就）
+│   ├── room.js              ← 房间管理（创建/加入/离开/状态，含头像传递）
+│   ├── game.js              ← 游戏引擎（发牌/下注/摊牌/bot AI 用蒙特卡洛模拟，含头像）
+│   └── userStore.js         ← 用户持久化（JSON 文件，含注册/登录/统计/成就/筹码/签到/头像）
 ├── data/users.json          ← 用户数据文件
 └── package.json             ← 依赖：ws@^8.18.0
 ```
@@ -38,80 +38,73 @@ ssh -i ~/.ssh/id_ed25519_deploy root@47.106.206.100 "cd /opt/poker-online && pm2
 
 ### WebSocket 协议
 
-客户端 → 服务端：auth / user:register / user:login / user:profile / user:guest / room:create / room:join / room:leave / room:start / room:ready / room:list / room:botGame / room:spectate / game:action / stats:get / voice:join / voice:leave / voice:offer / voice:answer / voice:ice-candidate
-服务端 → 客户端：auth:ok / user:registered / user:loggedIn / user:profile / user:achievement / user:error / room:created / room:joined / room:state / room:players / room:playerJoined / room:playerLeft / room:ready / room:error / room:left / room:destroyed / room:list / game:started / game:state / game:action / game:finished / game:hand-result / stats:data / voice:join / voice:leave / voice:offer / voice:answer / voice:ice-candidate
+客户端 → 服务端：auth / user:register / user:login / user:tokenLogin / user:profile / user:guest / user:checkin / user:checkinInfo / user:setAvatar / room:create / room:join / room:leave / room:start / room:ready / room:list / room:botGame / room:spectate / room:interact / game:action / game:nextHand / stats:get / voice:join / voice:leave / voice:offer / voice:answer / voice:ice-candidate
+服务端 → 客户端：auth:ok / user:registered / user:loggedIn / user:profile / user:checkin / user:checkinInfo / user:avatarUpdated / user:achievement / user:error / room:created / room:joined / room:state / room:players / room:playerJoined / room:playerLeft / room:ready / room:interact / room:error / room:left / room:destroyed / room:list / game:started / game:state / game:action / game:finished / game:hand-result / game:waitingForNext / stats:data / voice:*
 
 ### 前端关键结构（index.html）
 
 页面/屏幕：#lobbyScreen（首页大厅）→ #createRoomScreen（创建房间页）→ #roomScreen（等待房间）→ #table-container（游戏桌面）
+大厅功能按钮：💰筹码余额 / 📅签到 / 😊换装 / 🎰场景 / 🔮占卜 / 🏆排行榜 / 📖教程
 JS 工具函数：`$(id)` 获取元素，`showScreen(id)` 切换屏幕，`toast(msg)` 弹提示，`showError(msg)` 显示错误
 语音：VoiceChat 模块（IIFE），基于 WebRTC P2P + WebSocket 信令
 音效：Web Audio API 合成（无外部音频文件）
+背景音乐：BGMusic 模块，Web Audio API 合成赌场氛围音乐（和弦进行 Cmaj7→Am7→Fmaj7→G7）
 语音播报：Web Speech API (TTS)
 成就：20 个成就定义，JSON 文件持久化
 
 ---
 
-### 待实现功能清单（16 项）
+### 已实现功能清单
 
-**P0 — 紧急修复**
+**P1 — 核心游戏体验（已部署 ✅）**
 
-1. **局内退出按钮**：游戏桌面（#table-container）左上角已有 `#gameExitBtn`（✕ 圆形按钮），点击发送 `room:leave`。如果用户反馈看不到，检查 CSS 是否被遮挡或 z-index 不够（当前 z-index:200）。
+1. ✅ **45 秒操作倒计时**：SVG 圆环倒计时，≤5s 脉冲警告，超时服务端自动弃牌（game.js 45000ms timeout）
+2. ✅ **不自动开下一手**：一手结束后显示 #nextHandBar，15s 倒计时，房主可点"立即开始"跳过（game:nextHand）
+3. ✅ **赢家结算画面**：#settlementOverlay 全屏 overlay 展示赢家信息（皇冠+牌型+金额），8s 自动关闭
+4. ✅ **手机预设加注九宫格**：移动端显示 50/100/200/500/1K/2K/5K/ALL IN/自定义 按钮网格，隐藏滑条
+5. ✅ **手机横屏模式**：@media (max-height:500px) and (orientation:landscape) 紧凑布局
+6. ✅ **局内退出按钮**：#gameExitBtn 左上角 ✕ 按钮，发送 room:leave
 
-2. **语音引导不生效**：局内语音播报用的 Web Speech API（speechSynthesis），检查 voiceAnnounceToggle 的状态管理。可能原因：移动端浏览器需要用户交互后才能播放 TTS；HTTPS 缺失导致部分 API 不可用。
+**P2 — UI/交互增强（已部署 ✅）**
 
-**P1 — 核心游戏体验**
+7. ✅ **背景音乐**：BGMusic 模块，Web Audio 合成，🎵 开关按钮，localStorage 记忆状态
+8. ✅ **筹码飞行动画**：跟注/加注/All-in 时 .flying-chip 元素飞向底池（CSS @keyframes chipFly）
+9. ✅ **玩家间互动**：座位 😊 触发按钮 → #interactPanel（🌹送花/💰送筹码/🍺敬酒/👏鼓掌/😂嘲笑/🎉庆祝）→ room:interact WebSocket 消息 → spawnGiftFly 动画
 
-3. **45 秒操作倒计时**：轮到玩家时启动 45s 倒计时，剩余 5s 时强烈视觉+声音提示，超时自动弃牌。需要改 game.js 服务端加 timer + 前端显示倒计时圆环/进度条。服务端超时发送 `game:action { action: 'fold' }`。
+**P3 — 系统功能（已部署 ✅）**
 
-4. **不自动开下一手**：当前一手结束后暂停，给玩家时间。显示结算信息，房主点「下一手」或倒计时 15s 后自动开始。改 room.js 的自动开局逻辑。
+10. ✅ **每日签到 + 筹码经济**：
+    - 服务端：userStore.js 新增 chips（初始1000）/lastCheckin/checkinStreak 字段
+    - 连续签到 7 天奖励递增：50/80/100/150/200/300/500
+    - 客户端：大厅显示 💰筹码余额 + 📅签到按钮，登录后自动弹出签到弹窗
+    - 个人中心显示筹码余额
+11. ✅ **角色换装 + 座位头像**：
+    - 18 个头像 emoji + 12 个颜色可选
+    - 选择保存到 userStore（avatar + avatarColor 字段）
+    - 游戏中座位显示自定义头像和颜色（替代默认的索引分配）
+    - 房间等待界面也显示头像
 
-5. **赢家结算画面**：一手牌结束时，赢得最多的玩家展示专属结算动画（音乐 + 舞蹈动作 + 筹码飞入效果）。前端在 game:hand-result 事件后渲染全屏 overlay。
+**P4 — 大型功能（已部署 ✅）**
 
-6. **手机预设加注按钮（九宫格）**：移动端加注不用滑动条，改为预设按钮网格：50/100/200/500/1000/2000/5000/ALL-IN/自定义。检测 `window.innerWidth < 768` 时切换显示模式。
+12. ✅ **10 个赌桌场景**：CSS 变量主题切换
+    - 经典绿毡 / 澳门永利 / 拉斯维加斯 / 摩纳哥 / 地下赌场 / 大西洋城 / 私人会所 / 皇家赌场 / 太空舱 / 竹林雅室
+    - 大厅 🎰场景 按钮打开选择器，选中后立即应用到牌桌
+13. ✅ **占卜模块（水晶球）**：输入问题 → 水晶球脉冲动画 → 随机 24 条运势
+14. ✅ **塔罗牌**：22 张大阿尔卡纳牌组，抽 3 张（过去/现在/未来），逐张翻牌动画 + 解读
 
-7. **手机横屏模式**：CSS 加 `@media (orientation: landscape)` 样式，横屏时牌桌横向展开，操作面板在右侧。viewport meta 去掉 `user-scalable=no` 的限制或加 landscape 适配。
+### 待处理事项
 
-**P2 — UI/交互增强**
-
-8. **电脑/手机两套 UI**：桌面端宽屏布局（牌桌居中，信息面板两侧），移动端竖屏/横屏自适应。用 CSS `@media` + JS 检测设备类型切换 class。
-
-9. **加注/跟注丢筹码动画**：玩家操作时，筹码从玩家头像飞向底池区域。用 CSS @keyframes + JS 动态创建元素，动画结束后移除。
-
-10. **局内背景音乐**：Web Audio API 合成优雅皇宫风格循环音乐（或引入免费音频 URL）。加音乐开关按钮，音量可调。
-
-11. **玩家间交互**：送花/送美女荷官/送筹码等表情互动。前端显示互动按钮面板，发送 WebSocket 消息（新增 `room:interact` 类型），接收方显示动画。
-
-12. **局内排行榜**：游戏进行中可查看实时排行榜。前端加排行榜按钮/侧边栏，复用现有 stats:get 协议。
-
-**P3 — 系统功能**
-
-13. **每日签到 + 筹码经济**：每天签到送筹码（服务端 userStore.js 记录 lastCheckin 日期）。初始筹码从个人中心余额扣除，输光时自动补充。需改 userStore 加 chips/checkin 字段，前端加签到弹窗。
-
-14. **个人角色换装 + 筹码收藏**：个人中心加角色形象系统（头饰/衣服/表情），可装备不同外观。筹码收藏柜展示稀有筹码（金龙/钻石等），通过成就或活动解锁。前端加换装 overlay + 收藏柜页面。
-
-15. **换装角色坐在座位上**：座位上的玩家头像替换为角色的换装形象。手机端可简化为头像框+小图标。
-
-**P4 — 大型功能**
-
-16. **10 个赌桌场景**：澳门赌场/永利皇宫/地下赌场/拉斯维加斯/摩纳哥/大西洋城/葡京/金沙/星际/水晶宫。每个场景有不同的背景图/牌桌纹理/环境音效/装饰元素。前端用 CSS 变量 + 背景图切换实现，场景选择在创建房间时设定。
-
-17. **占卜模块**：大厅或局内可触发占卜，展示塔罗翻牌/水晶球/转盘等动画，随机给出「幸运值」加成（纯心理效果）。前端用 CSS 3D 翻转动画。
-
-18. **塔罗牌小游戏**：独立的塔罗牌玩法入口，玩家可单独去玩。需要独立的屏幕/游戏逻辑/牌面渲染。
-
-### 建议实现顺序
-
-第一批（核心体验）：3→4→5→6→7 → 部署验证
-第二批（交互增强）：8→9→10→11→12 → 部署验证
-第三批（系统功能）：13→14→15 → 部署验证
-第四批（大型功能）：16→17→18 → 部署验证
-每批完成后部署测试，确保不破坏已有功能。
+1. **HTTPS 配置**：域名审核通过后，配置 Nginx + Let's Encrypt SSL，解决 getUserMedia 麦克风权限问题
+2. **语音引导修复**：TTS 播报需要 HTTPS + 用户交互后才能播放，移动端可能需要额外处理
+3. **语音聊天**：WebRTC 的 getUserMedia 要求安全上下文（HTTPS），当前 HTTP 下不可用
+4. **局内排行榜侧边栏**：游戏进行中可查看实时排行榜（stats:get 协议已有，前端未做侧边栏 UI）
+5. **筹码与游戏联动**：当前签到获得筹码，但游戏输赢尚未与用户筹码余额联动（只是房间内的虚拟筹码）
 
 ### 注意事项
 
-- 前端是单文件 ~2600 行，修改时注意不要引入重复 ID，改完后用 `grep -oP 'id="[^"]*"' file | sort | uniq -d` 检查
+- 前端是单文件 3000+ 行，修改时注意不要引入重复 ID，改完后用 `grep -oP 'id="[^"]*"' file | sort | uniq -d` 检查
 - 所有新屏幕需要加入 showScreen() 的管理（`.screen` class）
 - WebSocket 新增消息类型需要同时改 server/index.js 的路由和前端的事件监听
 - 手机端测试用 Chrome DevTools 的 Device Mode
 - HTTPS 配好后语音聊天才能正常工作（getUserMedia 要求安全上下文）
+- Task 子代理容易改错文件路径，建议直接编辑而非使用子代理

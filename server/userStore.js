@@ -9,6 +9,17 @@ const crypto = require('crypto');
 
 const DATA_FILE = path.join(__dirname, '..', 'data', 'users.json');
 
+// ===== Daily Check-in Rewards (by consecutive streak) =====
+const CHECKIN_REWARDS = [
+  { day: 1, chips: 50,  label: '第1天' },
+  { day: 2, chips: 80,  label: '第2天' },
+  { day: 3, chips: 100, label: '第3天' },
+  { day: 4, chips: 150, label: '第4天' },
+  { day: 5, chips: 200, label: '第5天' },
+  { day: 6, chips: 300, label: '第6天' },
+  { day: 7, chips: 500, label: '第7天 (满勤!)' },
+];
+
 // ===== Achievement Definitions =====
 const ACHIEVEMENTS = {
   first_win:       { name: '初次胜利', desc: '赢得第一手牌', icon: '🏆' },
@@ -94,6 +105,12 @@ class UserStore {
       passwordHash: this._hashPassword(password),
       createdAt: Date.now(),
       lastLogin: Date.now(),
+      chips: 1000,  // Starting chips
+      lastCheckin: null,  // Date string "YYYY-MM-DD"
+      checkinStreak: 0,
+      checkinHistory: [],  // Array of date strings
+      avatar: '🦊',  // Selected avatar emoji
+      avatarColor: '#4fc3f7',  // Selected color
       stats: {
         handsPlayed: 0,
         handsWon: 0,
@@ -199,6 +216,107 @@ class UserStore {
     return { newAchievements, profile: this._sanitize(user) };
   }
 
+  // ===== Daily Check-in =====
+  checkin(username) {
+    const user = this.users.get(username);
+    if (!user) return { error: '用户不存在' };
+
+    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const lastCheckin = user.lastCheckin || '';
+
+    if (lastCheckin === today) {
+      return { error: '今天已经签到过了', alreadyCheckedIn: true, streak: user.checkinStreak || 0 };
+    }
+
+    // Calculate streak
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    let streak = 0;
+    if (lastCheckin === yesterday) {
+      streak = (user.checkinStreak || 0) + 1;
+    } else if (lastCheckin !== today) {
+      streak = 1; // Reset streak if missed a day
+    }
+    if (streak > 7) streak = ((streak - 1) % 7) + 1; // Cycle through 7-day rewards
+
+    // Get reward
+    const reward = CHECKIN_REWARDS[Math.min(streak - 1, CHECKIN_REWARDS.length - 1)];
+
+    // Apply
+    user.chips = (user.chips || 1000) + reward.chips;
+    user.lastCheckin = today;
+    user.checkinStreak = streak;
+    if (!user.checkinHistory) user.checkinHistory = [];
+    user.checkinHistory.push(today);
+    if (user.checkinHistory.length > 90) user.checkinHistory = user.checkinHistory.slice(-90); // Keep 90 days
+
+    this._save();
+
+    return {
+      success: true,
+      streak,
+      reward: reward.chips,
+      rewardLabel: reward.label,
+      totalChips: user.chips,
+      // Last 7 days for calendar display
+      recentDays: CHECKIN_REWARDS.map((r, i) => ({
+        day: r.day,
+        chips: r.chips,
+        label: r.label,
+        completed: i < streak,
+        current: i === streak - 1,
+      })),
+    };
+  }
+
+  // ===== Get Check-in Info (without performing checkin) =====
+  getCheckinInfo(username) {
+    const user = this.users.get(username);
+    if (!user) return null;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const lastCheckin = user.lastCheckin || '';
+    const alreadyCheckedIn = lastCheckin === today;
+
+    let nextStreak = (user.checkinStreak || 0);
+    if (lastCheckin === yesterday && !alreadyCheckedIn) nextStreak++;
+    else if (!alreadyCheckedIn) nextStreak = 1;
+    if (nextStreak > 7) nextStreak = ((nextStreak - 1) % 7) + 1;
+
+    return {
+      alreadyCheckedIn,
+      streak: user.checkinStreak || 0,
+      chips: user.chips || 1000,
+      lastCheckin,
+      recentDays: CHECKIN_REWARDS.map((r, i) => ({
+        day: r.day,
+        chips: r.chips,
+        label: r.label,
+        completed: alreadyCheckedIn ? i < (user.checkinStreak || 0) : false,
+        current: alreadyCheckedIn ? i === (user.checkinStreak || 0) - 1 : false,
+      })),
+    };
+  }
+
+  // ===== Add/Remove Chips =====
+  adjustChips(username, amount) {
+    const user = this.users.get(username);
+    if (!user) return false;
+    user.chips = Math.max(0, (user.chips || 1000) + amount);
+    this._save();
+    return user.chips;
+  }
+
+  // ===== Update Avatar =====
+  updateAvatar(username, avatar, color) {
+    const user = this.users.get(username);
+    if (!user) return null;
+    if (avatar) user.avatar = avatar;
+    if (color) user.avatarColor = color;
+    this._save();
+    return { avatar: user.avatar, avatarColor: user.avatarColor };
+  }
+
   // ===== Achievement Checking =====
   _checkAchievements(user, data) {
     const s = user.stats;
@@ -283,6 +401,11 @@ class UserStore {
       username: user.username,
       createdAt: user.createdAt,
       lastLogin: user.lastLogin,
+      chips: user.chips || 1000,
+      lastCheckin: user.lastCheckin || null,
+      checkinStreak: user.checkinStreak || 0,
+      avatar: user.avatar || '🦊',
+      avatarColor: user.avatarColor || '#4fc3f7',
       stats: { ...user.stats },
       achievements: user.achievements.map(id => ({ id, ...ACHIEVEMENTS[id] })),
       gamesPlayed: user.gamesPlayed || 0,

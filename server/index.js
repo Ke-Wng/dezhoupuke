@@ -251,6 +251,8 @@ wss.on('connection', (ws) => {
           playerSockets.set(playerId, ws);
           ws.playerId = playerId;
           ws.playerName = result.username;
+          ws._playerAvatar = result.profile.avatar || '🦊';
+          ws._playerColor = result.profile.avatarColor || null;
           ws.send(JSON.stringify({
             type: 'user:registered',
             data: { token: result.token, username: result.username, profile: result.profile, playerId }
@@ -270,6 +272,8 @@ wss.on('connection', (ws) => {
           playerSockets.set(playerId, ws);
           ws.playerId = playerId;
           ws.playerName = result.username;
+          ws._playerAvatar = result.profile.avatar || '🦊';
+          ws._playerColor = result.profile.avatarColor || null;
           ws.send(JSON.stringify({
             type: 'user:loggedIn',
             data: { token: result.token, username: result.username, profile: result.profile, playerId }
@@ -289,6 +293,8 @@ wss.on('connection', (ws) => {
           playerSockets.set(playerId, ws);
           ws.playerId = playerId;
           ws.playerName = result.username;
+          ws._playerAvatar = result.profile.avatar || '🦊';
+          ws._playerColor = result.profile.avatarColor || null;
           ws.send(JSON.stringify({
             type: 'user:loggedIn',
             data: { token: data.token, username: result.username, profile: result.profile, playerId }
@@ -313,6 +319,42 @@ wss.on('connection', (ws) => {
       // ===== User: Achievements List =====
       case 'user:achievements': {
         ws.send(JSON.stringify({ type: 'user:achievementsList', data: { achievements: ACHIEVEMENTS } }));
+        break;
+      }
+
+      // ===== User: Daily Check-in =====
+      case 'user:checkin': {
+        if (!currentUser) {
+          ws.send(JSON.stringify({ type: 'user:error', data: { message: '请先登录' } }));
+          break;
+        }
+        const checkinResult = userStore.checkin(currentUser.username);
+        ws.send(JSON.stringify({ type: 'user:checkin', data: checkinResult }));
+        break;
+      }
+
+      // ===== User: Check-in Info =====
+      case 'user:checkinInfo': {
+        if (!currentUser) break;
+        const info = userStore.getCheckinInfo(currentUser.username);
+        if (info) {
+          ws.send(JSON.stringify({ type: 'user:checkinInfo', data: info }));
+        }
+        break;
+      }
+
+      // ===== User: Set Avatar =====
+      case 'user:setAvatar': {
+        if (!currentUser) {
+          ws.send(JSON.stringify({ type: 'user:error', data: { message: '请先登录' } }));
+          break;
+        }
+        const result = userStore.updateAvatar(currentUser.username, data.avatar, data.color);
+        if (result) {
+          ws._playerAvatar = result.avatar;
+          ws._playerColor = result.avatarColor;
+          ws.send(JSON.stringify({ type: 'user:avatarUpdated', data: result }));
+        }
         break;
       }
 
@@ -441,6 +483,17 @@ wss.on('connection', (ws) => {
         break;
       }
 
+      // ===== Game: Next Hand (host skips wait) =====
+      case 'game:nextHand': {
+        if (!currentRoom || currentRoom.hostId !== playerId) break;
+        if (currentRoom.nextHandTimer) {
+          clearTimeout(currentRoom.nextHandTimer);
+          currentRoom.nextHandTimer = null;
+          if (currentRoom.players.size >= 2) currentRoom.startGame(playerId);
+        }
+        break;
+      }
+
       // ===== Room: Bot Game =====
       case 'room:botGame': {
         if (!playerId) { ws.send(JSON.stringify({ type: 'error', data: { message: '请先认证' } })); break; }
@@ -534,6 +587,18 @@ wss.on('connection', (ws) => {
       case 'voice:ice-candidate': {
         if (!currentRoom) break;
         currentRoom.routeVoiceSignal(playerId, 'voice:ice-candidate', data);
+        break;
+      }
+
+      // ===== Player Interaction (gifts/emojis) =====
+      case 'room:interact': {
+        if (!currentRoom) break;
+        const targetWs = playerSockets.get(data.targetId);
+        if (targetWs && targetWs.readyState === 1) {
+          targetWs.send(JSON.stringify({ type: 'room:interact', data: { fromId: playerId, gift: data.gift } }));
+        }
+        // Also broadcast to sender for confirmation
+        ws.send(JSON.stringify({ type: 'room:interact', data: { fromId: playerId, toId: data.targetId, gift: data.gift, self: true } }));
         break;
       }
 

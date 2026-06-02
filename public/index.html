@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>德州扑克 Online</title>
 <style>
 @import url('https://fonts.loli.net/css2?family=Noto+Sans+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
@@ -21,23 +21,132 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
 /* ===== SCREENS ===== */
 .screen { position:fixed; inset:0; display:none; flex-direction:column; justify-content:center; align-items:center; z-index:100; background:#0a0a0a; }
 .screen.active { display:flex; }
+#lobbyScreen { overflow-y:auto; -webkit-overflow-scrolling:touch; justify-content:flex-start; padding:32px 0 40px; }
+#lobbyScreen.active { display:flex; }
 
 /* ===== LOBBY ===== */
-.lobby-title { font-size:48px; font-weight:900; color:var(--gold); margin-bottom:4px; text-shadow:0 0 40px rgba(212,168,64,0.2); }
-.lobby-sub { font-family:'JetBrains Mono',monospace; font-size:13px; color:#4a4a4a; letter-spacing:4px; margin-bottom:48px; }
+.lobby-hero { text-align:center; margin-bottom:32px; }
+.lobby-suits { font-size:20px; letter-spacing:12px; color:rgba(255,255,255,0.08); margin-bottom:8px; }
+.lobby-title { font-size:42px; font-weight:900; color:var(--gold); margin-bottom:2px; text-shadow:0 0 60px rgba(212,168,64,0.15); letter-spacing:4px; }
+.lobby-sub { font-family:'JetBrains Mono',monospace; font-size:11px; color:#3a3a3a; letter-spacing:6px; }
 
-.lobby-box { background:#111; border:1px solid #222; border-radius:12px; padding:32px; width:min(420px,90vw); }
-.lobby-box h3 { font-size:15px; color:var(--gold); margin-bottom:16px; letter-spacing:2px; }
+.lobby-top-bar { display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:28px; flex-wrap:wrap; }
+.lobby-top-btn { background:rgba(255,255,255,0.03); border:1px solid #1a1a1a; border-radius:20px; padding:6px 16px; font-size:12px; color:var(--dim); cursor:pointer; transition:all 0.2s; font-family:'Noto Sans SC',sans-serif; display:flex; align-items:center; gap:5px; }
+.lobby-top-btn:hover { border-color:#333; color:var(--white); background:rgba(255,255,255,0.05); }
+
+/* Main action cards */
+.action-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; width:min(620px,92vw); margin-bottom:20px; }
+.action-card { background:linear-gradient(165deg,rgba(20,20,20,0.95),rgba(12,12,12,0.95)); border:1px solid #1a1a1a; border-radius:16px; padding:28px 16px 22px; text-align:center; cursor:pointer; transition:all 0.3s cubic-bezier(0.25,0.8,0.25,1); position:relative; overflow:hidden; }
+.action-card::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at top,rgba(212,168,64,0.04),transparent 70%); opacity:0; transition:opacity 0.3s; }
+.action-card:hover { transform:translateY(-6px); border-color:rgba(212,168,64,0.25); box-shadow:0 12px 40px rgba(0,0,0,0.4),0 0 0 1px rgba(212,168,64,0.1); }
+.action-card:hover::before { opacity:1; }
+.action-card:active { transform:translateY(-2px); }
+.action-card-icon { font-size:32px; margin-bottom:12px; display:block; }
+.action-card-title { font-size:15px; font-weight:900; color:var(--white); margin-bottom:4px; letter-spacing:1px; }
+.action-card-desc { font-size:10px; color:#555; letter-spacing:0.5px; }
+
+/* Join bar */
+.join-bar { display:flex; gap:8px; width:min(620px,92vw); margin-bottom:12px; align-items:flex-end; }
+.join-bar .input-group { flex:1; margin-bottom:0; }
+.join-bar .input-group label { font-size:10px; color:#444; letter-spacing:1px; margin-bottom:4px; }
+.join-bar .input-group input { font-size:16px; letter-spacing:6px; text-align:center; text-transform:uppercase; padding:10px; }
+.join-bar-btn { padding:10px 20px; background:transparent; border:1.5px solid #2a2a2a; border-radius:8px; color:var(--dim); font-size:12px; font-weight:700; cursor:pointer; transition:all 0.2s; font-family:'Noto Sans SC',sans-serif; white-space:nowrap; height:40px; }
+.join-bar-btn:hover { border-color:#444; color:var(--white); }
+.join-bar-btn.spectate { font-size:11px; padding:10px 14px; }
+
+/* Settings panel (collapsible) */
+.settings-trigger { display:flex; align-items:center; justify-content:center; gap:6px; width:min(620px,92vw); padding:8px; color:#444; font-size:11px; cursor:pointer; transition:color 0.2s; border:none; background:none; font-family:'Noto Sans SC',sans-serif; letter-spacing:1px; margin:0 auto; }
+.settings-trigger:hover { color:var(--dim); }
+.settings-trigger .arrow { transition:transform 0.3s; display:inline-block; font-size:9px; }
+.settings-trigger.open .arrow { transform:rotate(180deg); }
+.settings-panel { max-height:0; overflow:hidden; transition:max-height 0.4s ease,opacity 0.3s ease,margin 0.3s ease; opacity:0; width:min(620px,92vw); margin:0 auto; }
+.settings-panel.open { max-height:600px; opacity:1; margin-top:8px; }
+.settings-inner { background:rgba(15,15,15,0.8); border:1px solid #1a1a1a; border-radius:12px; padding:20px; }
+.settings-row { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.settings-row:last-child { margin-bottom:0; }
+.settings-label { font-size:11px; color:#555; min-width:60px; letter-spacing:1px; }
+
+/* Create room screen */
+#createRoomScreen { overflow-y:auto; -webkit-overflow-scrolling:touch; justify-content:flex-start; padding:24px 0 40px; }
+.create-screen-inner { width:min(560px,92vw); }
+.create-back-btn { display:flex; align-items:center; gap:6px; background:none; border:none; color:var(--dim); font-size:13px; cursor:pointer; padding:8px 0; margin-bottom:16px; font-family:'Noto Sans SC',sans-serif; transition:color 0.2s; }
+.create-back-btn:hover { color:var(--white); }
+.create-section-title { font-size:20px; font-weight:900; color:var(--white); margin-bottom:20px; letter-spacing:2px; }
+.create-section { background:rgba(15,15,15,0.7); border:1px solid #1a1a1a; border-radius:12px; padding:18px; margin-bottom:16px; }
+.create-section-label { font-size:11px; color:#555; letter-spacing:1px; margin-bottom:10px; display:block; }
+.create-actions { display:flex; gap:12px; margin-bottom:16px; }
+.create-actions .btn { flex:1; padding:14px; font-size:14px; }
+.create-room-list-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.create-room-list-header h3 { font-size:13px; color:#666; font-weight:400; }
+
+/* Game exit button */
+.game-exit-btn { position:absolute; top:12px; left:12px; z-index:200; width:36px; height:36px; border-radius:50%; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.4); font-size:16px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+.game-exit-btn:hover { background:rgba(204,51,51,0.4); border-color:rgba(204,51,51,0.5); color:#fff; }
+
+/* Turn timer */
+.turn-timer { position:absolute; top:12px; right:12px; z-index:200; width:48px; height:48px; display:none; align-items:center; justify-content:center; }
+.turn-timer.active { display:flex; }
+.turn-timer-ring { width:48px; height:48px; transform:rotate(-90deg); }
+.turn-timer-ring circle { fill:none; stroke-width:3; }
+.turn-timer-ring .bg { stroke:rgba(255,255,255,0.06); }
+.turn-timer-ring .fg { stroke:#d4a840; stroke-linecap:round; transition:stroke-dashoffset 1s linear,stroke 0.3s; }
+.turn-timer-ring .fg.warn { stroke:#cc3333; }
+.turn-timer-num { position:absolute; font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:700; color:var(--white); text-shadow:0 0 10px rgba(0,0,0,0.8); }
+.turn-timer-num.warn { color:#ff4444; animation:timerPulse 0.5s ease infinite; }
+@keyframes timerPulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.3); } }
+
+/* Winner settlement overlay */
+.settlement-overlay { position:fixed; inset:0; z-index:500; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+.settlement-overlay.active { display:flex; animation:fadeIn 0.5s ease; }
+@keyframes fadeIn { from{ opacity:0; } to{ opacity:1; } }
+.settlement-card { background:linear-gradient(165deg,rgba(25,25,20,0.98),rgba(12,12,10,0.98)); border:2px solid rgba(212,168,64,0.3); border-radius:20px; padding:36px 40px; max-width:400px; width:90vw; position:relative; overflow:hidden; }
+.settlement-card::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at top,rgba(212,168,64,0.06),transparent 70%); }
+.settlement-crown { font-size:48px; margin-bottom:8px; }
+.settlement-title { font-size:24px; font-weight:900; color:var(--gold); margin-bottom:4px; letter-spacing:2px; }
+.settlement-winner { font-size:16px; color:var(--white); margin-bottom:2px; }
+.settlement-hand { font-size:13px; color:#888; margin-bottom:16px; }
+.settlement-amount { font-size:36px; font-weight:900; color:#60d080; font-family:'JetBrains Mono',monospace; margin-bottom:20px; }
+.settlement-btn { background:transparent; border:1.5px solid var(--gold); border-radius:10px; padding:10px 32px; color:var(--gold); font-size:14px; font-weight:700; cursor:pointer; font-family:'Noto Sans SC',sans-serif; transition:all 0.2s; }
+.settlement-btn:hover { background:var(--gold); color:#0a0a0a; }
+
+/* Next hand waiting overlay */
+.next-hand-bar { position:absolute; bottom:80px; left:50%; transform:translateX(-50%); z-index:300; background:rgba(15,15,15,0.9); border:1px solid #1a1a1a; border-radius:12px; padding:12px 24px; display:none; align-items:center; gap:16px; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+.next-hand-bar.active { display:flex; }
+.next-hand-text { font-size:13px; color:var(--dim); }
+.next-hand-skip { background:none; border:1px solid #333; border-radius:8px; padding:6px 16px; color:var(--gold); font-size:12px; cursor:pointer; font-family:'Noto Sans SC',sans-serif; transition:all 0.2s; }
+.next-hand-skip:hover { border-color:var(--gold); }
+
+/* Mobile preset raise grid */
+.raise-presets { display:none; grid-template-columns:repeat(3,1fr); gap:6px; width:100%; margin-top:6px; }
+.raise-preset-btn { background:rgba(15,15,15,0.8); border:1px solid #2a2a2a; border-radius:8px; padding:8px; font-size:12px; font-weight:700; color:var(--dim); cursor:pointer; font-family:'JetBrains Mono',monospace; transition:all 0.15s; text-align:center; }
+.raise-preset-btn:hover { border-color:var(--gold); color:var(--gold); }
+.raise-preset-btn.allin { color:#f06060; border-color:rgba(204,51,51,0.3); }
+.raise-preset-btn.allin:hover { border-color:var(--red); background:rgba(204,51,51,0.1); }
+@media (max-width:768px) {
+  .raise-presets { display:grid; }
+  .raise-slider { display:none !important; }
+}
+
+/* Auth section */
+.auth-section { width:min(620px,92vw); margin-bottom:16px; background:rgba(15,15,15,0.6); border:1px solid #1a1a1a; border-radius:12px; padding:16px; }
+.auth-section .input-group { margin-bottom:10px; }
+.auth-section .input-group label { font-size:10px; }
+.auth-section .input-group input { padding:8px 12px; font-size:13px; }
+.auth-section .btn-row { margin-top:10px; }
+.auth-section .btn { padding:8px; font-size:12px; }
+
+/* Legacy support (keep existing elements working) */
+.lobby-box { display:none; } /* Hidden - replaced by new layout */
 
 .input-group { margin-bottom:16px; }
-.input-group label { display:block; font-size:12px; color:var(--dim); margin-bottom:6px; }
+.input-group label { display:block; font-size:11px; color:#444; margin-bottom:5px; letter-spacing:1px; }
 .input-group input {
-  width:100%; padding:10px 14px; background:#0a0a0a; border:1.5px solid #2a2a2a;
-  border-radius:6px; color:var(--white); font-family:'JetBrains Mono',monospace; font-size:14px;
+  width:100%; padding:10px 14px; background:#0a0a0a; border:1.5px solid #1a1a1a;
+  border-radius:8px; color:var(--white); font-family:'JetBrains Mono',monospace; font-size:14px;
   outline:none; transition:border-color 0.3s;
 }
 .input-group input:focus { border-color:var(--gold); }
-.input-group input::placeholder { color:#3a3a3a; }
+.input-group input::placeholder { color:#2a2a2a; }
 
 .btn-row { display:flex; gap:10px; margin-top:20px; }
 
@@ -49,26 +158,16 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
 .btn:hover { transform:translateY(-2px); }
 .btn-gold { border-color:var(--gold); color:var(--gold); }
 .btn-gold:hover { background:var(--gold); color:#0a0a0a; }
-.btn-dim { border-color:#444; color:#888; }
-.btn-dim:hover { background:rgba(255,255,255,0.05); }
+.btn-dim { border-color:#333; color:#666; }
+.btn-dim:hover { background:rgba(255,255,255,0.04); border-color:#555; }
 .btn-red { border-color:var(--red); color:#f06060; }
 .btn-red:hover { background:rgba(204,51,51,0.15); }
 .btn-green { border-color:#40a060; color:#60d080; }
 .btn-green:hover { background:rgba(64,160,96,0.15); }
 
-.divider { height:1px; background:#222; margin:24px 0; }
+.divider { height:1px; background:#1a1a1a; margin:16px 0; }
 
-.room-list { max-height:200px; overflow-y:auto; }
-.room-item {
-  display:flex; justify-content:space-between; align-items:center;
-  padding:12px; background:#0a0a0a; border:1px solid #1a1a1a; border-radius:6px;
-  margin-bottom:8px; cursor:pointer; transition:border-color 0.3s;
-}
-.room-item:hover { border-color:var(--gold-dim); }
-.room-item-code { font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:700; color:var(--gold); }
-.room-item-info { font-size:12px; color:var(--dim); text-align:right; }
-
-.error-msg { color:var(--red); font-size:12px; margin-top:8px; min-height:18px; }
+.error-msg { color:var(--red); font-size:11px; margin-top:6px; min-height:16px; text-align:center; }
 
 /* Bot options */
 .bot-options {
@@ -117,7 +216,13 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
 #table-container { position:relative; width:100vw; height:100vh; background:radial-gradient(ellipse at center,#0f0f0f 0%,#050505 100%); display:none; justify-content:center; align-items:center; }
 #table-container.active { display:flex; }
 
-.table { position:relative; width:min(90vw,900px); height:min(55vh,450px); background:radial-gradient(ellipse at center,var(--felt) 0%,var(--felt-dark) 100%); border-radius:50%; border:12px solid var(--wood); box-shadow:0 0 0 3px var(--wood-light),0 0 60px rgba(0,0,0,0.8),inset 0 0 80px rgba(0,0,0,0.3); }
+.table { position:relative; width:min(90vw,900px); height:min(55vh,450px); background:radial-gradient(ellipse at center,var(--felt) 0%,var(--felt-dark) 100%); border-radius:50%; border:12px solid var(--wood); box-shadow:0 0 0 3px var(--wood-light),0 0 60px rgba(0,0,0,0.8),inset 0 0 80px rgba(0,0,0,0.3); transition:box-shadow 0.3s; }
+.table.table-your-turn { animation: tableEdgePulse 1.5s ease-in-out infinite; }
+@keyframes tableEdgePulse {
+  0%   { box-shadow:0 0 0 3px var(--wood-light),0 0 60px rgba(0,0,0,0.8),inset 0 0 80px rgba(0,0,0,0.3),0 0 15px rgba(212,168,64,0.15); }
+  50%  { box-shadow:0 0 0 3px var(--wood-light),0 0 60px rgba(0,0,0,0.8),inset 0 0 80px rgba(0,0,0,0.3),0 0 40px rgba(212,168,64,0.35); }
+  100% { box-shadow:0 0 0 3px var(--wood-light),0 0 60px rgba(0,0,0,0.8),inset 0 0 80px rgba(0,0,0,0.3),0 0 15px rgba(212,168,64,0.15); }
+}
 .table::before { content:''; position:absolute; inset:8px; border-radius:50%; border:1.5px solid rgba(255,255,255,0.06); }
 
 .pot-display { position:absolute; top:38%; left:50%; transform:translate(-50%,-50%); text-align:center; z-index:10; }
@@ -224,6 +329,40 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
   100% { opacity:0.35; transform:translateY(6px); }
 }
 
+/* ===== ACTIVE TURN PULSE (Enhanced) ===== */
+@keyframes activeTurnPulse {
+  0% {
+    box-shadow: 0 0 15px rgba(212,168,64,0.4);
+    transform: scale(1.0);
+  }
+  50% {
+    box-shadow: 0 0 45px rgba(212,168,64,0.7), 0 0 60px rgba(212,168,64,0.2);
+    transform: scale(1.05);
+  }
+  100% {
+    box-shadow: 0 0 15px rgba(212,168,64,0.4);
+    transform: scale(1.0);
+  }
+}
+
+/* ===== TURN LABEL ===== */
+.turn-label {
+  position:absolute; bottom:calc(min(55vh,450px) + 20px); left:50%;
+  transform:translateX(-50%);
+  font-family:'Noto Sans SC',sans-serif; font-size:18px; font-weight:900;
+  color:var(--gold); text-shadow:0 0 20px rgba(212,168,64,0.5);
+  z-index:40; pointer-events:none;
+  animation: turnLabelFloat 1.5s ease-in-out infinite;
+  display:none; white-space:nowrap;
+  background:rgba(0,0,0,0.6); padding:6px 20px; border-radius:20px;
+  border:1.5px solid rgba(212,168,64,0.4);
+}
+.turn-label.visible { display:block; }
+@keyframes turnLabelFloat {
+  0%,100% { transform:translateX(-50%) translateY(0); }
+  50% { transform:translateX(-50%) translateY(-8px); }
+}
+
 /* ===== SOUND TOGGLE ===== */
 .sound-toggle {
   position:fixed; top:12px; right:16px; z-index:60;
@@ -233,6 +372,50 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
   backdrop-filter:blur(8px);
 }
 .sound-toggle:hover { border-color:var(--gold-dim); }
+
+/* Music toggle */
+.music-toggle {
+  position:fixed; top:12px; right:110px; z-index:60;
+  background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1);
+  border-radius:20px; padding:6px 14px; cursor:pointer;
+  font-size:16px; line-height:1; transition:all 0.3s;
+  backdrop-filter:blur(8px);
+}
+.music-toggle:hover { border-color:var(--gold-dim); }
+.music-toggle.active { border-color:var(--gold); background:rgba(212,168,64,0.12); }
+
+/* Chip flying animation */
+.flying-chip { position:fixed; z-index:400; width:20px; height:20px; border-radius:50%; pointer-events:none; animation:chipFly 0.6s cubic-bezier(0.25,0.8,0.25,1) forwards; }
+@keyframes chipFly {
+  0% { opacity:1; transform:scale(1) translateY(0); }
+  60% { opacity:1; transform:scale(0.8) translateY(-40px); }
+  100% { opacity:0; transform:scale(0.4) translateY(-80px) translateX(var(--fly-x, 0px)); }
+}
+.flying-gift { position:fixed; z-index:400; font-size:28px; pointer-events:none; animation:giftFloat 2s ease-out forwards; }
+@keyframes giftFloat {
+  0% { opacity:1; transform:scale(0.5) translateY(0); }
+  30% { opacity:1; transform:scale(1.2) translateY(-20px); }
+  100% { opacity:0; transform:scale(1) translateY(-100px); }
+}
+
+/* Player interaction panel */
+.interact-panel { position:absolute; z-index:350; display:none; flex-direction:column; gap:6px; background:rgba(10,10,10,0.95); border:1px solid #1a1a1a; border-radius:12px; padding:10px; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+.interact-panel.active { display:flex; }
+.interact-btn { background:none; border:1px solid #2a2a2a; border-radius:8px; padding:6px 12px; font-size:12px; color:var(--dim); cursor:pointer; transition:all 0.15s; text-align:center; font-family:'Noto Sans SC',sans-serif; }
+.interact-btn:hover { border-color:var(--gold); color:var(--gold); }
+.interact-trigger { position:absolute; z-index:200; width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); color:rgba(255,255,255,0.3); font-size:14px; display:none; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
+.interact-trigger:hover { background:rgba(212,168,64,0.2); border-color:var(--gold); color:var(--gold); }
+
+/* ===== VOICE ANNOUNCEMENT TOGGLE ===== */
+.voice-announce-toggle {
+  position:fixed; top:12px; right:60px; z-index:60;
+  background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1);
+  border-radius:20px; padding:6px 14px; cursor:pointer;
+  font-size:16px; line-height:1; transition:all 0.3s;
+  backdrop-filter:blur(8px);
+}
+.voice-announce-toggle:hover { border-color:var(--gold-dim); }
+.voice-announce-toggle.active { border-color:var(--gold); background:rgba(212,168,64,0.12); }
 
 /* ===== SPECTATOR BADGE ===== */
 .spectator-badge {
@@ -246,7 +429,7 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
 
 /* ===== VOICE CHAT ===== */
 .voice-toggle {
-  position:fixed; top:12px; right:110px; z-index:60;
+  position:fixed; top:12px; right:150px; z-index:60;
   background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1);
   border-radius:20px; padding:6px 14px; cursor:pointer;
   font-size:16px; line-height:1; transition:all 0.3s;
@@ -434,6 +617,28 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
 .room-card-status.bot { background:rgba(96,176,240,0.12); color:#60b0f0; }
 .room-list-empty { text-align:center; color:#3a3a3a; font-size:12px; padding:32px 0; }
 
+/* ===== COLLAPSIBLE MORE OPTIONS ===== */
+.more-options-toggle {
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  width:100%; padding:10px; margin-top:16px;
+  background:transparent; border:1px solid #2a2a2a; border-radius:8px;
+  color:var(--dim); font-size:12px; cursor:pointer;
+  font-family:'Noto Sans SC',sans-serif; transition:all 0.2s;
+}
+.more-options-toggle:hover { border-color:#444; color:var(--white); }
+.more-options-toggle .arrow { transition:transform 0.3s; display:inline-block; }
+.more-options-toggle.expanded .arrow { transform:rotate(180deg); }
+.more-options-content {
+  max-height:0; overflow:hidden; transition:max-height 0.4s ease, opacity 0.3s ease; opacity:0;
+}
+.more-options-content.expanded { max-height:800px; opacity:1; margin-top:16px; }
+.spectate-link { display:block; text-align:center; margin-top:8px; font-size:11px; color:var(--dim); cursor:pointer; text-decoration:none; transition:color 0.2s; }
+.spectate-link:hover { color:var(--gold); }
+.room-list-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.room-list-header h3 { margin-bottom:0; }
+.room-refresh-btn { background:none; border:1px solid #2a2a2a; border-radius:6px; color:var(--dim); font-size:12px; padding:3px 10px; cursor:pointer; transition:all 0.2s; font-family:'Noto Sans SC',sans-serif; }
+.room-refresh-btn:hover { border-color:var(--gold-dim); color:var(--gold); }
+
 .card-dealing { animation:dealCard 0.35s ease-out forwards; }
 @keyframes dealCard { from{transform:scale(0.3) translateY(-60px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
 
@@ -441,7 +646,7 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
 .seat.folded { opacity:0.35; }
 .seat.disconnected { opacity:0.2; }
 .seat-info { background:rgba(0,0,0,0.7); border:1.5px solid rgba(255,255,255,0.1); border-radius:10px; padding:6px 14px; text-align:center; min-width:90px; backdrop-filter:blur(8px); transition:border-color 0.3s,box-shadow 0.3s; }
-.seat.active .seat-info { border-color:var(--gold); box-shadow:0 0 20px rgba(212,168,64,0.3); }
+.seat.active .seat-info { border-color:var(--gold); box-shadow:0 0 20px rgba(212,168,64,0.3); animation:activeTurnPulse 1.2s ease-in-out infinite; }
 .seat.winner .seat-info { border-color:#40e080; box-shadow:0 0 24px rgba(64,224,128,0.4); }
 .seat-name { font-size:12px; font-weight:700; }
 .seat-stack { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--gold); }
@@ -456,8 +661,8 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
 
 .seat-bet { position:absolute; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--gold); background:rgba(0,0,0,0.5); padding:2px 8px; border-radius:10px; white-space:nowrap; }
 
-.dealer-btn { position:absolute; width:20px; height:20px; border-radius:50%; background:linear-gradient(135deg,#f0f0f0,#c0c0c0); color:#333; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:900; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.4); z-index:25; }
-.blind-btn { position:absolute; width:18px; height:18px; border-radius:50%; font-family:'JetBrains Mono',monospace; font-size:7px; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.3); z-index:25; }
+.dealer-btn { position:absolute; width:20px; height:20px; border-radius:50%; background:linear-gradient(135deg,#f0f0f0,#c0c0c0); color:#333; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:900; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.4); z-index:5; }
+.blind-btn { position:absolute; width:18px; height:18px; border-radius:50%; font-family:'JetBrains Mono',monospace; font-size:7px; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.3); z-index:5; }
 .blind-sb { background:linear-gradient(135deg,#4a9eff,#2070d0); color:#fff; }
 .blind-bb { background:linear-gradient(135deg,#ff6a4a,#d04020); color:#fff; }
 
@@ -535,8 +740,8 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
   .my-hand .card .rank { font-size:14px; } .my-hand .card .suit { font-size:16px; }
   .my-hand .card .rank-br { font-size:10px; }
   .my-hand .card:hover { transform:translateY(-4px); }
-  /* Push hand up above action panel on mobile */
-  #table-container.action-active .my-hand { bottom:max(120px, calc(env(safe-area-inset-bottom) + 116px)); }
+  /* Push hand up above action panel on mobile — extra room for raise presets grid */
+  #table-container.action-active .my-hand { bottom:max(180px, calc(env(safe-area-inset-bottom) + 176px)); }
   /* Seat info — compact */
   .seat-info { padding:3px 8px; min-width:60px; border-radius:6px; }
   .seat-name { font-size:10px; }
@@ -550,7 +755,7 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
   /* Action panel — compact with safe area */
   .action-panel { padding:8px 10px; padding-bottom:max(10px, env(safe-area-inset-bottom)); gap:6px; }
   .action-btn { padding:8px 12px; font-size:11px; min-width:50px; }
-  .raise-slider input[type="range"] { width:80px; }
+  .raise-slider { display:none !important; }
   .raise-amount { font-size:11px; min-width:40px; }
   /* Status bar */
   .status-bar { font-size:11px; padding:4px 12px; }
@@ -558,13 +763,15 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
   .hand-rank-label { bottom:100px; font-size:11px; padding:3px 10px; }
   /* Dealer button */
   .dealer-btn { width:16px; height:16px; font-size:8px; }
+  .blind-btn { width:14px; height:14px; font-size:6px; }
   /* Room */
   .room-code-big { font-size:32px; }
   /* Bet */
   .seat-bet { font-size:10px; padding:1px 6px; }
   /* Voice/Sound toggles */
-  .voice-toggle, .sound-toggle { padding:4px 10px; font-size:13px; }
-  .voice-toggle { right:80px; }
+  .voice-toggle, .sound-toggle, .voice-announce-toggle { padding:4px 10px; font-size:13px; }
+  .voice-toggle { right:110px; }
+  .voice-announce-toggle { right:50px; }
   /* Seat repositions for mobile */
   .seat-0 { bottom:0; }
   .seat-1 { left:0; top:38%; }
@@ -574,20 +781,229 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
   .seat-4 { right:0; top:38%; }
   .seat-4 .seat-bet { left:-36px; }
   .seat-5 { top:-8px; }
+  .turn-label { font-size:14px; padding:4px 14px; bottom:calc(34vh + 16px); }
+  /* Mobile lobby */
+  .action-grid { grid-template-columns:repeat(3,1fr); gap:8px; width:94vw; }
+  .action-card { padding:18px 8px 14px; border-radius:12px; }
+  .action-card-icon { font-size:24px; margin-bottom:8px; }
+  .action-card-title { font-size:13px; }
+  .action-card-desc { font-size:9px; }
+  .join-bar { width:94vw; flex-wrap:wrap; }
+  .join-bar .input-group { min-width:0; }
+  .join-bar-btn { padding:10px 12px; font-size:11px; }
+  .settings-trigger, .settings-panel { width:94vw; }
+  .settings-inner { padding:14px; }
+  .auth-section { width:94vw; padding:12px; }
+  .create-screen-inner { width:94vw; }
+  .create-actions { flex-direction:column; }
+  .create-actions .btn { padding:12px; }
+  .lobby-title { font-size:28px; letter-spacing:2px; }
+  .lobby-sub { font-size:9px; letter-spacing:3px; }
+  .lobby-suits { font-size:14px; }
+  .lobby-top-bar { gap:6px; margin-bottom:20px; }
+  .lobby-top-btn { padding:5px 10px; font-size:10px; }
+  .lobby-hero { margin-bottom:20px; }
+  /* Keep old selectors for compatibility */
+  .lobby-box { padding:20px; }
 }
+/* Landscape mode for mobile */
+@media (max-height:500px) and (orientation:landscape) {
+  #lobbyScreen { padding:12px 0 20px; }
+  .lobby-hero { margin-bottom:8px; }
+  .lobby-title { font-size:22px; }
+  .lobby-sub { font-size:8px; }
+  .lobby-suits { font-size:10px; }
+  .lobby-top-bar { margin-bottom:8px; }
+  .action-grid { gap:6px; margin-bottom:8px; }
+  .action-card { padding:10px 6px 8px; }
+  .action-card-icon { font-size:18px; margin-bottom:4px; }
+  .action-card-title { font-size:11px; }
+  .action-card-desc { display:none; }
+  .join-bar { margin-bottom:6px; }
+  .auth-section { padding:8px; margin-bottom:8px; }
+  #table-container .table { width:80vw; height:45vh; }
+  .seat { transform:scale(0.85); }
+  .action-panel { padding:6px; }
+  .action-btn { padding:8px 12px; font-size:12px; }
+  .raise-presets { grid-template-columns:repeat(5,1fr); gap:4px; }
+  .raise-preset-btn { padding:6px; font-size:10px; }
+  .turn-timer { width:36px; height:36px; }
+  .turn-timer-ring { width:36px; height:36px; }
+  .turn-timer-num { font-size:12px; }
+  .game-exit-btn { width:28px; height:28px; font-size:12px; }
+  .next-hand-bar { bottom:50px; padding:8px 16px; }
+}
+
+/* ===== CHIP BALANCE & DAILY CHECK-IN ===== */
+.chip-balance { display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg,rgba(212,168,64,0.15),rgba(160,120,40,0.08)); border:1px solid rgba(212,168,64,0.25); border-radius:20px; padding:4px 14px 4px 10px; font-size:13px; color:var(--gold); font-weight:600; letter-spacing:0.3px; cursor:default; user-select:none; transition:all 0.2s; }
+.chip-balance:hover { border-color:rgba(212,168,64,0.5); background:rgba(212,168,64,0.12); }
+.chip-balance .chip-icon { font-size:16px; }
+.chip-balance .chip-amount { min-width:32px; text-align:center; }
+
+/* Check-in button (lobby) */
+.checkin-btn { display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg,rgba(64,224,128,0.2),rgba(40,180,90,0.1)); border:1px solid rgba(64,224,128,0.3); border-radius:20px; padding:4px 14px 4px 10px; font-size:12px; color:#40e080; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+.checkin-btn:hover { border-color:rgba(64,224,128,0.6); background:rgba(64,224,128,0.15); transform:scale(1.03); }
+.checkin-btn.done { opacity:0.5; cursor:default; color:var(--dim); border-color:rgba(255,255,255,0.06); background:rgba(255,255,255,0.03); }
+.checkin-btn.done:hover { transform:none; }
+
+/* Check-in Modal */
+.checkin-modal { position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); display:none; align-items:center; justify-content:center; }
+.checkin-modal.active { display:flex; animation:fadeIn 0.3s ease; }
+.checkin-card { background:linear-gradient(165deg,rgba(28,28,22,0.98),rgba(14,14,10,0.98)); border:2px solid rgba(212,168,64,0.3); border-radius:20px; padding:28px 24px 24px; max-width:380px; width:90vw; position:relative; overflow:hidden; }
+.checkin-card::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 0%, rgba(212,168,64,0.06), transparent 70%); pointer-events:none; }
+.checkin-title { text-align:center; font-size:18px; font-weight:700; color:var(--gold); margin-bottom:4px; letter-spacing:1px; }
+.checkin-streak { text-align:center; font-size:12px; color:var(--dim); margin-bottom:18px; }
+.checkin-streak span { color:var(--gold); font-weight:600; }
+.checkin-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:20px; }
+.checkin-day { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:8px 4px; text-align:center; transition:all 0.3s; position:relative; }
+.checkin-day .day-num { font-size:10px; color:var(--dim); margin-bottom:4px; }
+.checkin-day .day-chips { font-size:14px; font-weight:700; color:var(--text); }
+.checkin-day .day-icon { font-size:18px; margin-top:2px; }
+.checkin-day.completed { background:rgba(64,224,128,0.12); border-color:rgba(64,224,128,0.3); }
+.checkin-day.completed .day-chips { color:#40e080; }
+.checkin-day.completed::after { content:'✓'; position:absolute; top:2px; right:4px; font-size:9px; color:#40e080; font-weight:700; }
+.checkin-day.current { background:rgba(212,168,64,0.15); border-color:var(--gold); box-shadow:0 0 12px rgba(212,168,64,0.2); transform:scale(1.05); }
+.checkin-day.current .day-chips { color:var(--gold); }
+.checkin-claim-btn { display:block; width:100%; padding:12px; border:none; border-radius:12px; background:linear-gradient(135deg,var(--gold),#b8862d); color:#1a1a0f; font-size:15px; font-weight:700; cursor:pointer; transition:all 0.2s; letter-spacing:1px; }
+.checkin-claim-btn:hover { transform:scale(1.02); box-shadow:0 4px 20px rgba(212,168,64,0.3); }
+.checkin-claim-btn:disabled { opacity:0.4; cursor:default; transform:none; box-shadow:none; }
+.checkin-close { position:absolute; top:12px; right:14px; background:none; border:none; color:var(--dim); font-size:18px; cursor:pointer; padding:4px; transition:color 0.2s; z-index:2; }
+.checkin-close:hover { color:var(--text); }
+
+/* Check-in reward animation */
+.checkin-reward-popup { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:700; pointer-events:none; }
+.checkin-reward-popup .reward-num { font-size:48px; font-weight:900; color:var(--gold); text-shadow:0 0 40px rgba(212,168,64,0.6); animation:rewardPopIn 0.6s ease forwards; }
+.checkin-reward-popup .reward-label { font-size:14px; color:rgba(255,255,255,0.7); text-align:center; animation:rewardPopIn 0.6s 0.2s ease both; }
+@keyframes rewardPopIn { 0% { transform:scale(0.3); opacity:0; } 60% { transform:scale(1.2); opacity:1; } 100% { transform:scale(1); opacity:1; } }
+@keyframes rewardFadeUp { 0% { opacity:1; transform:translateY(0); } 100% { opacity:0; transform:translateY(-40px); } }
+
+/* ===== AVATAR SELECTOR ===== */
+.avatar-selector-btn { display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:4px 14px; font-size:12px; color:var(--dim); cursor:pointer; transition:all 0.2s; }
+.avatar-selector-btn:hover { border-color:rgba(212,168,64,0.3); color:var(--gold); }
+.avatar-modal { position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); display:none; align-items:center; justify-content:center; }
+.avatar-modal.active { display:flex; animation:fadeIn 0.3s ease; }
+.avatar-card { background:linear-gradient(165deg,rgba(28,28,22,0.98),rgba(14,14,10,0.98)); border:2px solid rgba(212,168,64,0.3); border-radius:20px; padding:24px; max-width:420px; width:92vw; position:relative; overflow:hidden; }
+.avatar-card::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 0%, rgba(212,168,64,0.06), transparent 70%); pointer-events:none; }
+.avatar-card-title { text-align:center; font-size:16px; font-weight:700; color:var(--gold); margin-bottom:16px; letter-spacing:1px; }
+.avatar-section-label { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:8px; margin-top:14px; }
+.avatar-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
+.avatar-option { width:100%; aspect-ratio:1; border-radius:12px; border:2px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.03); display:flex; align-items:center; justify-content:center; font-size:24px; cursor:pointer; transition:all 0.2s; }
+.avatar-option:hover { border-color:rgba(212,168,64,0.3); background:rgba(212,168,64,0.08); transform:scale(1.08); }
+.avatar-option.selected { border-color:var(--gold); background:rgba(212,168,64,0.15); box-shadow:0 0 12px rgba(212,168,64,0.2); }
+.color-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
+.color-option { width:100%; aspect-ratio:1; border-radius:50%; border:3px solid transparent; cursor:pointer; transition:all 0.2s; }
+.color-option:hover { transform:scale(1.15); }
+.color-option.selected { border-color:#fff; box-shadow:0 0 12px currentColor; transform:scale(1.1); }
+.avatar-preview { text-align:center; margin:16px 0 12px; }
+.avatar-preview-circle { display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; border-radius:50%; font-size:32px; border:3px solid var(--gold); box-shadow:0 0 20px rgba(212,168,64,0.2); transition:all 0.3s; }
+.avatar-save-btn { display:block; width:100%; padding:10px; border:none; border-radius:12px; background:linear-gradient(135deg,var(--gold),#b8862d); color:#1a1a0f; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.2s; margin-top:8px; }
+.avatar-save-btn:hover { transform:scale(1.02); box-shadow:0 4px 20px rgba(212,168,64,0.3); }
+.avatar-close { position:absolute; top:12px; right:14px; background:none; border:none; color:var(--dim); font-size:18px; cursor:pointer; padding:4px; z-index:2; }
+.avatar-close:hover { color:var(--text); }
+
+/* ===== TABLE SCENES (10 themes) ===== */
+.scene-macau    { --felt:#6b5a1a; --felt-dark:#4d400f; --wood:#8a7540; --wood-light:#b8a060; }
+.scene-vegas    { --felt:#8b1a1a; --felt-dark:#6b0f0f; --wood:#2a2a2a; --wood-light:#555; }
+.scene-monaco   { --felt:#1a4a6b; --felt-dark:#0f3550; --wood:#c0c8d0; --wood-light:#e0e8f0; }
+.scene-underground { --felt:#2a2a2a; --felt-dark:#1a1a1a; --wood:#444; --wood-light:#666; }
+.scene-atlantic { --felt:#1a6b6b; --felt-dark:#0f4d4d; --wood:#3a5a5a; --wood-light:#5a8a8a; }
+.scene-club     { --felt:#6b1a3c; --felt-dark:#4d0f2a; --wood:#5a2210; --wood-light:#8a4420; }
+.scene-royale   { --felt:#0a0a0a; --felt-dark:#050505; --wood:#d4a840; --wood-light:#f0c860; }
+.scene-space    { --felt:#2a1a5a; --felt-dark:#1a0f40; --wood:#3a3a6a; --wood-light:#6a6aaa; }
+.scene-bamboo   { --felt:#3a6b3c; --felt-dark:#2a4d2a; --wood:#7a6a3a; --wood-light:#a08a5a; }
+.scene-classic  { --felt:#1a6b3c; --felt-dark:#0f4d2a; --wood:#3a2210; --wood-light:#5a3a1a; }
+
+/* Scene selector */
+.scene-btn { display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:4px 14px; font-size:12px; color:var(--dim); cursor:pointer; transition:all 0.2s; }
+.scene-btn:hover { border-color:rgba(212,168,64,0.3); color:var(--gold); }
+.scene-modal { position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); display:none; align-items:center; justify-content:center; }
+.scene-modal.active { display:flex; animation:fadeIn 0.3s ease; }
+.scene-card { background:linear-gradient(165deg,rgba(28,28,22,0.98),rgba(14,14,10,0.98)); border:2px solid rgba(212,168,64,0.3); border-radius:20px; padding:24px; max-width:480px; width:92vw; position:relative; overflow:hidden; }
+.scene-card-title { text-align:center; font-size:16px; font-weight:700; color:var(--gold); margin-bottom:16px; letter-spacing:1px; }
+.scene-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.scene-option { border-radius:12px; border:2px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.03); padding:12px; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
+.scene-option:hover { border-color:rgba(212,168,64,0.3); transform:scale(1.02); }
+.scene-option.selected { border-color:var(--gold); box-shadow:0 0 16px rgba(212,168,64,0.2); }
+.scene-preview { width:100%; height:36px; border-radius:50%; margin-bottom:8px; }
+.scene-name { font-size:12px; color:var(--text); font-weight:600; }
+.scene-desc { font-size:10px; color:var(--dim); margin-top:2px; }
+.scene-close { position:absolute; top:12px; right:14px; background:none; border:none; color:var(--dim); font-size:18px; cursor:pointer; z-index:2; }
+.scene-close:hover { color:var(--text); }
+
+/* ===== FORTUNE TELLING & TAROT ===== */
+.fortune-lobby-btn { display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg,rgba(128,0,255,0.15),rgba(80,0,180,0.08)); border:1px solid rgba(128,0,255,0.25); border-radius:20px; padding:4px 14px; font-size:12px; color:#b080ff; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+.fortune-lobby-btn:hover { border-color:rgba(128,0,255,0.5); background:rgba(128,0,255,0.12); transform:scale(1.03); }
+
+/* Fortune Modal */
+.fortune-modal { position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.9); display:none; align-items:center; justify-content:center; }
+.fortune-modal.active { display:flex; animation:fadeIn 0.4s ease; }
+.fortune-card { background:linear-gradient(165deg,rgba(20,10,40,0.98),rgba(10,5,25,0.98)); border:2px solid rgba(128,0,255,0.3); border-radius:20px; padding:28px 24px; max-width:440px; width:92vw; position:relative; overflow:hidden; text-align:center; }
+.fortune-card::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 20%, rgba(128,0,255,0.08), transparent 60%); pointer-events:none; }
+.fortune-title { font-size:18px; font-weight:700; color:#b080ff; margin-bottom:16px; letter-spacing:2px; }
+.fortune-tabs { display:flex; gap:8px; justify-content:center; margin-bottom:18px; }
+.fortune-tab { padding:6px 18px; border-radius:16px; border:1px solid rgba(128,0,255,0.2); background:transparent; color:var(--dim); font-size:12px; cursor:pointer; transition:all 0.2s; }
+.fortune-tab.active { background:rgba(128,0,255,0.2); border-color:#b080ff; color:#b080ff; }
+
+/* Crystal Ball */
+.crystal-ball-wrap { position:relative; width:140px; height:140px; margin:0 auto 16px; }
+.crystal-ball { width:140px; height:140px; border-radius:50%; background:radial-gradient(circle at 40% 35%,rgba(180,140,255,0.3),rgba(80,0,180,0.2) 50%,rgba(20,0,50,0.8) 100%); border:3px solid rgba(128,0,255,0.3); box-shadow:0 0 40px rgba(128,0,255,0.2), inset 0 0 40px rgba(128,0,255,0.1); cursor:pointer; transition:all 0.3s; }
+.crystal-ball:hover { box-shadow:0 0 60px rgba(128,0,255,0.4), inset 0 0 60px rgba(128,0,255,0.2); }
+.crystal-ball.animating { animation:crystalPulse 0.6s ease infinite; }
+@keyframes crystalPulse { 0%,100% { box-shadow:0 0 40px rgba(128,0,255,0.3), inset 0 0 40px rgba(128,0,255,0.1); } 50% { box-shadow:0 0 80px rgba(128,0,255,0.6), inset 0 0 80px rgba(128,0,255,0.3); } }
+.crystal-base { position:absolute; bottom:-8px; left:50%; transform:translateX(-50%); width:80px; height:16px; background:linear-gradient(to bottom,#3a2a1a,#1a1008); border-radius:0 0 40px 40px; }
+.fortune-input { width:100%; padding:10px 14px; border-radius:10px; border:1px solid rgba(128,0,255,0.2); background:rgba(255,255,255,0.03); color:var(--text); font-size:13px; margin-bottom:12px; font-family:'Noto Sans SC',sans-serif; }
+.fortune-input::placeholder { color:rgba(255,255,255,0.2); }
+.fortune-result { font-size:14px; color:rgba(255,255,255,0.8); line-height:1.8; padding:12px; background:rgba(128,0,255,0.06); border-radius:12px; border:1px solid rgba(128,0,255,0.15); margin-top:12px; min-height:60px; animation:fadeIn 0.5s ease; }
+.fortune-ask-btn { display:inline-block; padding:10px 28px; border-radius:20px; border:none; background:linear-gradient(135deg,#8000ff,#5000b0); color:#fff; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; margin-top:8px; }
+.fortune-ask-btn:hover { transform:scale(1.04); box-shadow:0 4px 20px rgba(128,0,255,0.3); }
+.fortune-ask-btn:disabled { opacity:0.4; cursor:default; transform:none; }
+
+/* Tarot */
+.tarot-spread { display:flex; gap:12px; justify-content:center; margin:16px 0; }
+.tarot-card-slot { width:80px; text-align:center; }
+.tarot-card-slot .tarot-label { font-size:10px; color:var(--dim); margin-bottom:6px; letter-spacing:1px; }
+.tarot-card { width:72px; height:110px; border-radius:8px; border:2px solid rgba(128,0,255,0.3); background:linear-gradient(135deg,rgba(40,20,80,0.9),rgba(20,10,40,0.9)); cursor:pointer; transition:all 0.4s; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:28px; }
+.tarot-card.face-down { background:repeating-linear-gradient(45deg,rgba(40,20,80,0.9),rgba(40,20,80,0.9) 4px,rgba(60,30,100,0.9) 4px,rgba(60,30,100,0.9) 8px); }
+.tarot-card.face-down::after { content:'✦'; font-size:20px; color:rgba(128,0,255,0.4); }
+.tarot-card:hover { transform:translateY(-4px); box-shadow:0 8px 24px rgba(128,0,255,0.2); }
+.tarot-card.revealed { border-color:#b080ff; box-shadow:0 0 16px rgba(128,0,255,0.3); animation:tarotReveal 0.6s ease; }
+@keyframes tarotReveal { 0% { transform:rotateY(90deg); } 100% { transform:rotateY(0); } }
+.tarot-card .tarot-emoji { font-size:28px; }
+.tarot-card-name { font-size:9px; color:rgba(255,255,255,0.7); margin-top:4px; max-width:72px; word-wrap:break-word; }
+.tarot-reading { font-size:13px; color:rgba(255,255,255,0.75); line-height:1.7; padding:10px; background:rgba(128,0,255,0.06); border-radius:10px; margin-top:8px; animation:fadeIn 0.4s ease; }
+.tarot-draw-btn { display:inline-block; padding:10px 28px; border-radius:20px; border:none; background:linear-gradient(135deg,#8000ff,#5000b0); color:#fff; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+.tarot-draw-btn:hover { transform:scale(1.04); box-shadow:0 4px 20px rgba(128,0,255,0.3); }
+.fortune-close { position:absolute; top:12px; right:14px; background:none; border:none; color:var(--dim); font-size:18px; cursor:pointer; z-index:2; }
+.fortune-close:hover { color:var(--text); }
 </style>
 </head>
 <body>
 
 <!-- ===== LOBBY SCREEN ===== -->
 <div class="screen active" id="lobbyScreen">
-  <div class="lobby-title">德州扑克</div>
-  <div class="lobby-sub">TEXAS HOLD'EM ONLINE</div>
-  <button class="btn btn-dim" id="leaderboardBtn" style="padding:8px 24px;margin-bottom:24px;font-size:12px;letter-spacing:2px">🏆 排行榜</button>
-  <div id="userArea"></div>
-  <button class="btn btn-dim" id="howToPlayBtn" style="padding:8px 24px;margin-bottom:12px;font-size:12px;letter-spacing:2px">📖 新手教程</button>
+  <!-- Hero -->
+  <div class="lobby-hero">
+    <div class="lobby-suits">♠ ♥ ♦ ♣</div>
+    <div class="lobby-title">德州扑克</div>
+    <div class="lobby-sub">TEXAS HOLD'EM ONLINE</div>
+  </div>
 
-  <div class="lobby-box">
+  <!-- Top bar -->
+  <div class="lobby-top-bar">
+    <div class="chip-balance" id="chipBalance" style="display:none"><span class="chip-icon">💰</span><span class="chip-amount" id="chipAmount">0</span></div>
+    <button class="checkin-btn" id="checkinBtn" style="display:none">📅 签到</button>
+    <button class="avatar-selector-btn" id="avatarBtn" style="display:none">😊 换装</button>
+    <button class="scene-btn" id="sceneBtn">🎰 场景</button>
+    <button class="fortune-lobby-btn" id="fortuneBtn">🔮 占卜</button>
+    <button class="lobby-top-btn" id="leaderboardBtn">🏆 排行榜</button>
+    <button class="lobby-top-btn" id="howToPlayBtn">📖 新手教程</button>
+  </div>
+
+  <!-- User area (login/register/guest) -->
+  <div id="userArea"></div>
+
+  <!-- Auth section -->
+  <div class="auth-section" id="authSection">
     <div class="auth-tabs" id="authTabs">
       <button class="auth-tab active" data-tab="guest">游客模式</button>
       <button class="auth-tab" data-tab="login">登录</button>
@@ -606,56 +1022,93 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
     <div class="auth-form active" id="guestForm">
       <div style="font-size:11px;color:var(--dim);padding:8px 0">游客模式无需注册，数据不会保存。注册账号可以保存战绩和成就。</div>
     </div>
+  </div>
 
+  <!-- Main action cards: 3 columns -->
+  <div class="action-grid">
+    <div class="action-card" id="cardTutorial" onclick="document.getElementById('howToPlayBtn').click()">
+      <span class="action-card-icon">📖</span>
+      <div class="action-card-title">新手教程</div>
+      <div class="action-card-desc">学习规则与玩法</div>
+    </div>
+    <div class="action-card" id="cardLobby">
+      <span class="action-card-icon">🏛️</span>
+      <div class="action-card-title">大厅</div>
+      <div class="action-card-desc">浏览公开房间</div>
+    </div>
+    <div class="action-card" id="cardCreate">
+      <span class="action-card-icon">✨</span>
+      <div class="action-card-title">新建房间</div>
+      <div class="action-card-desc">创建或人机对战</div>
+    </div>
+  </div>
+
+  <!-- Join bar -->
+  <div class="join-bar">
     <div class="input-group">
-      <label>你的昵称</label>
-      <input type="text" id="nameInput" placeholder="输入昵称" maxlength="12" value="">
+      <label>昵称</label>
+      <input type="text" id="nameInput" placeholder="输入昵称" maxlength="12">
+    </div>
+    <div class="input-group" style="max-width:160px">
+      <label>房间号</label>
+      <input type="text" id="codeInput" placeholder="6位房间号" maxlength="6" style="text-transform:uppercase;letter-spacing:4px;font-size:16px;text-align:center">
+    </div>
+    <button class="join-bar-btn" id="joinRoomBtn">加入</button>
+    <button class="join-bar-btn spectate" id="spectateLink">👁 观战</button>
+  </div>
+
+  <div class="error-msg" id="lobbyError"></div>
+</div>
+
+<!-- ===== CREATE ROOM SCREEN ===== -->
+<div class="screen" id="createRoomScreen">
+  <div class="create-screen-inner">
+    <button class="create-back-btn" id="createBackBtn">← 返回大厅</button>
+    <div class="create-section-title">创建房间</div>
+
+    <!-- Mode selector -->
+    <div class="create-section">
+      <span class="create-section-label">🎮 玩法模式</span>
+      <div class="mode-selector" id="modeSelector">
+        <button class="mode-btn active" data-mode="classic">经典</button>
+        <button class="mode-btn" data-mode="turbo">🔥 急速</button>
+        <button class="mode-btn" data-mode="shortdeck">🃏 短牌</button>
+        <button class="mode-btn" data-mode="highroller">💎 高额</button>
+        <button class="mode-btn" data-mode="allinfold">⚡ A/F</button>
+      </div>
+      <div class="mode-desc" id="modeDesc" style="font-size:11px;color:#666;margin-top:8px">经典德州扑克，标准盲注</div>
     </div>
 
-    <h3>创建房间</h3>
-    <div class="btn-row">
+    <!-- Bot options (hidden by default) -->
+    <div class="bot-options" id="botOptions" style="display:none">
+      <div class="create-section">
+        <span class="create-section-label">🤖 人机难度</span>
+        <select id="botDifficulty" style="width:100%;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;color:var(--white);padding:8px 12px;font-size:13px;font-family:'Noto Sans SC',sans-serif">
+          <option value="easy">🟢 新手</option>
+          <option value="medium" selected>🟡 进阶</option>
+          <option value="hard">🔴 高手</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="create-actions">
       <button class="btn btn-gold" id="createRoomBtn">创建房间</button>
       <button class="btn btn-green" id="botGameBtn">🤖 人机对战</button>
     </div>
-    <div class="bot-options" id="botOptions" style="display:none">
-      <label>难度：</label>
-      <select id="botDifficulty">
-        <option value="easy">🟢 新手</option>
-        <option value="medium" selected>🟡 进阶</option>
-        <option value="hard">🔴 高手</option>
-      </select>
+
+    <!-- Public room list -->
+    <div class="create-section">
+      <div class="create-room-list-header">
+        <span class="create-section-label" style="margin-bottom:0">🌐 公开房间</span>
+        <button class="room-refresh-btn" id="refreshRoomList" style="background:none;border:1px solid #1a1a1a;border-radius:6px;color:#555;padding:3px 10px;font-size:11px;cursor:pointer">🔄 刷新</button>
+      </div>
+      <div class="room-list" id="publicRoomList" style="max-height:240px;overflow-y:auto">
+        <div style="color:#3a3a3a;font-size:12px;text-align:center;padding:16px">点击刷新查看公开房间</div>
+      </div>
     </div>
 
-    <div class="mode-label">🎮 玩法模式</div>
-    <div class="mode-selector" id="modeSelector">
-      <button class="mode-btn active" data-mode="classic">经典</button>
-      <button class="mode-btn" data-mode="turbo">🔥 急速</button>
-      <button class="mode-btn" data-mode="shortdeck">🃏 短牌</button>
-      <button class="mode-btn" data-mode="highroller">💎 高额</button>
-      <button class="mode-btn" data-mode="allinfold">⚡ All-in/Fold</button>
-    </div>
-    <div class="mode-desc" id="modeDesc">经典德州扑克，标准盲注</div>
-
-    <div class="divider"></div>
-
-    <h3>加入房间</h3>
-    <div class="input-group">
-      <label>房间号</label>
-      <input type="text" id="codeInput" placeholder="输入6位房间号" maxlength="6" style="text-transform:uppercase;letter-spacing:4px;font-size:18px">
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-dim" id="joinRoomBtn">加入</button>
-      <button class="btn btn-dim" id="spectateBtn" style="color:var(--gold);border-color:var(--gold-dim)">👁 观战</button>
-    </div>
-
-    <div class="divider"></div>
-
-    <h3>🌐 公开房间大厅</h3>
-    <div class="room-list" id="publicRoomList">
-      <div style="color:#3a3a3a;font-size:12px;text-align:center;padding:16px">点击房间卡片直接加入，无需手动输入房间号</div>
-    </div>
-
-    <div class="error-msg" id="lobbyError"></div>
+    <div class="error-msg" id="createScreenError"></div>
   </div>
 </div>
 
@@ -677,11 +1130,20 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
 
 <!-- ===== GAME SCREEN ===== -->
 <div id="table-container">
+  <div class="game-exit-btn" id="gameExitBtn" title="退出游戏">✕</div>
+  <div class="turn-timer" id="turnTimer">
+    <svg class="turn-timer-ring" viewBox="0 0 48 48">
+      <circle class="bg" cx="24" cy="24" r="20"/>
+      <circle class="fg" id="timerFg" cx="24" cy="24" r="20" stroke-dasharray="125.66" stroke-dashoffset="0"/>
+    </svg>
+    <span class="turn-timer-num" id="timerNum">45</span>
+  </div>
   <div class="status-bar" id="statusBar"><span class="connection-dot online" id="connDot"></span>等待中...</div>
   <div class="table" id="table">
     <div class="pot-display"><div class="pot-label">POT</div><div class="pot-amount" id="potAmount">0</div></div>
     <div class="community" id="community"></div>
   </div>
+  <div class="turn-label" id="turnLabel">⏰ 轮到你了!</div>
   <div class="hand-rank-label" id="handRankLabel"></div>
   <div class="action-panel" id="actionPanel">
     <button class="action-btn btn-fold" id="btnFold">弃牌</button>
@@ -691,6 +1153,21 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
       <input type="range" id="raiseRange" min="0" max="1000" value="40">
       <span class="raise-amount" id="raiseValue">40</span>
     </div>
+    <div class="raise-presets" id="raisePresets">
+      <button class="raise-preset-btn" data-amount="50">50</button>
+      <button class="raise-preset-btn" data-amount="100">100</button>
+      <button class="raise-preset-btn" data-amount="200">200</button>
+      <button class="raise-preset-btn" data-amount="500">500</button>
+      <button class="raise-preset-btn" data-amount="1000">1K</button>
+      <button class="raise-preset-btn" data-amount="2000">2K</button>
+      <button class="raise-preset-btn" data-amount="5000">5K</button>
+      <button class="raise-preset-btn allin" data-amount="allin">ALL IN</button>
+      <button class="raise-preset-btn" data-amount="custom">自定义</button>
+    </div>
+    <div class="custom-raise-input" id="customRaiseInput" style="display:none;align-items:center;gap:8px;width:100%;justify-content:center;margin-top:6px;">
+      <input type="number" id="customRaiseAmount" inputmode="numeric" pattern="[0-9]*" placeholder="输入金额" style="width:120px;padding:8px 12px;border-radius:8px;border:1px solid var(--gold);background:rgba(0,0,0,0.6);color:var(--gold);font-size:16px;font-family:'JetBrains Mono',monospace;text-align:center;">
+      <button class="action-btn btn-raise" id="customRaiseConfirm" style="padding:8px 18px;font-size:12px;">确认</button>
+    </div>
     <button class="action-btn btn-raise" id="btnRaise">加注</button>
     <button class="action-btn btn-allin" id="btnAllin">ALL IN</button>
   </div>
@@ -698,7 +1175,119 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
 
 <div class="spectator-badge" id="spectatorBadge"><span class="eye">👁</span> 观战中</div>
 <div class="voice-toggle" id="voiceToggle" title="语音聊天">🎤</div>
+<div class="voice-announce-toggle" id="voiceAnnounceToggle" title="语音播报">🗣️</div>
 <div class="sound-toggle" id="soundToggle" title="音效开关">🔊</div>
+<div class="music-toggle" id="musicToggle" title="背景音乐">🎵</div>
+<!-- Player interaction panel (positioned dynamically) -->
+<div class="interact-panel" id="interactPanel">
+  <button class="interact-btn" data-gift="🌹">🌹 送花</button>
+  <button class="interact-btn" data-gift="💰">💰 送筹码</button>
+  <button class="interact-btn" data-gift="🍺">🍺 敬酒</button>
+  <button class="interact-btn" data-gift="👏">👏 鼓掌</button>
+  <button class="interact-btn" data-gift="😂">😂 嘲笑</button>
+  <button class="interact-btn" data-gift="🎉">🎉 庆祝</button>
+</div>
+<!-- Winner settlement overlay -->
+<div class="settlement-overlay" id="settlementOverlay">
+  <div class="settlement-card">
+    <div class="settlement-crown">👑</div>
+    <div class="settlement-title">赢家!</div>
+    <div class="settlement-winner" id="settlementWinner"></div>
+    <div class="settlement-hand" id="settlementHand"></div>
+    <div class="settlement-amount" id="settlementAmount"></div>
+    <button class="settlement-btn" id="settlementClose">继续</button>
+  </div>
+</div>
+
+<!-- ===== DAILY CHECK-IN MODAL ===== -->
+<div class="checkin-modal" id="checkinModal">
+  <div class="checkin-card">
+    <button class="checkin-close" id="checkinClose">&times;</button>
+    <div class="checkin-title">每日签到</div>
+    <div class="checkin-streak" id="checkinStreak">连续签到 <span>0</span> 天</div>
+    <div class="checkin-grid" id="checkinGrid"></div>
+    <button class="checkin-claim-btn" id="checkinClaimBtn">签到领取</button>
+  </div>
+</div>
+<div class="checkin-reward-popup" id="checkinRewardPopup" style="display:none">
+  <div class="reward-num" id="rewardNum"></div>
+  <div class="reward-label" id="rewardLabel"></div>
+</div>
+
+<!-- ===== AVATAR SELECTOR MODAL ===== -->
+<div class="avatar-modal" id="avatarModal">
+  <div class="avatar-card">
+    <button class="avatar-close" id="avatarClose">&times;</button>
+    <div class="avatar-card-title">角色换装</div>
+    <div class="avatar-preview">
+      <div class="avatar-preview-circle" id="avatarPreviewCircle">🦊</div>
+    </div>
+    <div class="avatar-section-label">选择头像</div>
+    <div class="avatar-grid" id="avatarGrid"></div>
+    <div class="avatar-section-label">选择颜色</div>
+    <div class="color-grid" id="colorGrid"></div>
+    <button class="avatar-save-btn" id="avatarSaveBtn">保存</button>
+  </div>
+</div>
+
+<!-- ===== SCENE SELECTOR MODAL ===== -->
+<div class="scene-modal" id="sceneModal">
+  <div class="scene-card">
+    <button class="scene-close" id="sceneClose">&times;</button>
+    <div class="scene-card-title">赌桌场景</div>
+    <div class="scene-grid" id="sceneGrid"></div>
+  </div>
+</div>
+
+<!-- ===== FORTUNE TELLING & TAROT MODAL ===== -->
+<div class="fortune-modal" id="fortuneModal">
+  <div class="fortune-card">
+    <button class="fortune-close" id="fortuneClose">&times;</button>
+    <div class="fortune-title">✨ 神秘占卜 ✨</div>
+    <div class="fortune-tabs">
+      <button class="fortune-tab active" data-tab="crystal">🔮 水晶球</button>
+      <button class="fortune-tab" data-tab="tarot">🃏 塔罗牌</button>
+    </div>
+    <!-- Crystal Ball Tab -->
+    <div id="crystalTab">
+      <div class="crystal-ball-wrap">
+        <div class="crystal-ball" id="crystalBall"></div>
+        <div class="crystal-base"></div>
+      </div>
+      <input class="fortune-input" id="fortuneQuestion" type="text" placeholder="心中默念你的问题..." maxlength="50">
+      <button class="fortune-ask-btn" id="fortuneAskBtn">开始占卜</button>
+      <div class="fortune-result" id="fortuneResult" style="display:none"></div>
+    </div>
+    <!-- Tarot Tab -->
+    <div id="tarotTab" style="display:none">
+      <div class="tarot-spread" id="tarotSpread">
+        <div class="tarot-card-slot">
+          <div class="tarot-label">过去</div>
+          <div class="tarot-card face-down" data-idx="0"></div>
+          <div class="tarot-card-name" id="tarotName0"></div>
+        </div>
+        <div class="tarot-card-slot">
+          <div class="tarot-label">现在</div>
+          <div class="tarot-card face-down" data-idx="1"></div>
+          <div class="tarot-card-name" id="tarotName1"></div>
+        </div>
+        <div class="tarot-card-slot">
+          <div class="tarot-label">未来</div>
+          <div class="tarot-card face-down" data-idx="2"></div>
+          <div class="tarot-card-name" id="tarotName2"></div>
+        </div>
+      </div>
+      <button class="tarot-draw-btn" id="tarotDrawBtn">洗牌抽牌</button>
+      <div class="tarot-reading" id="tarotReading" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Next hand waiting bar -->
+<div class="next-hand-bar" id="nextHandBar">
+  <span class="next-hand-text" id="nextHandText">下一手准备中...</span>
+  <button class="next-hand-skip" id="nextHandSkip">立即开始</button>
+</div>
 <div class="toast" id="toast"></div>
 
 <!-- ===== LEADERBOARD OVERLAY ===== -->
@@ -837,6 +1426,10 @@ const MODE_DESCS = {
   allinfold: '⚡ All-in/Fold — 只能全押或弃牌，没有中间选项',
 };
 
+// ===== PLAYER VISUAL CONSTANTS =====
+const PLAYER_COLORS = ['#4fc3f7', '#ff7043', '#66bb6a', '#ffd54f', '#ab47bc', '#26c6da'];
+const PLAYER_AVATARS = ['🦊', '🐯', '🐻', '🦅', '🐬', '🦁'];
+
 // ===== UI HELPERS =====
 function $(id) { return document.getElementById(id); }
 function showScreen(id) {
@@ -853,7 +1446,10 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-function showError(msg) { $('lobbyError').textContent = msg; }
+function showError(msg) {
+  const le = $('lobbyError'); if (le) le.textContent = msg;
+  const ce = $('createScreenError'); if (ce) ce.textContent = msg;
+}
 
 // Auth tabs
 document.querySelectorAll('.auth-tab').forEach(tab => {
@@ -988,6 +1584,647 @@ $('soundToggle').addEventListener('click', () => {
   $('soundToggle').textContent = on ? '🔊' : '🔇';
 });
 
+// ===== BACKGROUND MUSIC MODULE =====
+const BGMusic = (() => {
+  let ctx = null, playing = false, masterGain = null, loopId = null;
+  const NOTES = { C3:130.81, E3:164.81, G3:196.00, B3:246.94, C4:261.63, E4:329.63, G4:392.00, A4:440.00, B4:493.88, C5:523.25, E5:659.25 };
+
+  function init() {
+    if (ctx) return;
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = ctx.createGain();
+    masterGain.gain.value = 0.08;
+    masterGain.connect(ctx.destination);
+  }
+
+  function playNote(freq, start, dur, type = 'sine', vol = 0.3) {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0, start);
+    g.gain.linearRampToValueAtTime(vol, start + 0.05);
+    g.gain.setValueAtTime(vol, start + dur - 0.1);
+    g.gain.linearRampToValueAtTime(0, start + dur);
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start(start);
+    osc.stop(start + dur);
+  }
+
+  function playLoop() {
+    if (!playing) return;
+    const now = ctx.currentTime;
+    // Elegant ambient chord progression: Cmaj7 -> Am7 -> Fmaj7 -> G7
+    const chords = [
+      [NOTES.C3, NOTES.E3, NOTES.G3, NOTES.B3],
+      [NOTES.A4 * 0.5, NOTES.C4, NOTES.E4, NOTES.G4],
+      [NOTES.C3 * 1.335, NOTES.E3 * 1.335, NOTES.G3 * 1.335, NOTES.B3 * 1.335],
+      [NOTES.G3, NOTES.B3, NOTES.C4 * 1.19, NOTES.E4],
+    ];
+    const beatLen = 2.0;
+    chords.forEach((chord, ci) => {
+      const t = now + ci * beatLen;
+      chord.forEach((f, ni) => {
+        playNote(f, t + ni * 0.15, beatLen * 0.9, 'sine', 0.15 + ni * 0.03);
+      });
+    });
+    // Melody on top
+    const melody = [NOTES.E5, NOTES.G4, NOTES.C5, NOTES.E4, NOTES.G4, NOTES.C5, NOTES.B4, NOTES.G4];
+    melody.forEach((f, i) => {
+      if (Math.random() > 0.3) playNote(f, now + i * 1.0 + Math.random() * 0.2, 0.8, 'triangle', 0.06);
+    });
+    loopId = setTimeout(playLoop, chords.length * beatLen * 1000 - 100);
+  }
+
+  return {
+    start() {
+      if (playing) return;
+      init();
+      if (ctx.state === 'suspended') ctx.resume();
+      playing = true;
+      playLoop();
+    },
+    stop() {
+      playing = false;
+      if (loopId) { clearTimeout(loopId); loopId = null; }
+      if (masterGain) masterGain.gain.value = 0;
+    },
+    toggle() {
+      if (playing) this.stop(); else this.start();
+      return playing;
+    },
+    isPlaying() { return playing; }
+  };
+})();
+
+// Music toggle
+$('musicToggle').addEventListener('click', () => {
+  const on = BGMusic.toggle();
+  $('musicToggle').classList.toggle('active', on);
+});
+
+// ===== CHIP FLYING ANIMATION =====
+function spawnChipFly(fromEl, color) {
+  if (!fromEl) return;
+  const rect = fromEl.getBoundingClientRect();
+  const potEl = document.querySelector('.pot-display');
+  const potRect = potEl ? potEl.getBoundingClientRect() : { left: window.innerWidth / 2, top: window.innerHeight / 2 };
+  const chip = document.createElement('div');
+  chip.className = 'flying-chip';
+  const colors = ['#d4a840', '#cc3333', '#4fc3f7', '#66bb6a', '#ab47bc'];
+  chip.style.background = color || colors[Math.floor(Math.random() * colors.length)];
+  chip.style.left = (rect.left + rect.width / 2 - 10) + 'px';
+  chip.style.top = (rect.top + rect.height / 2 - 10) + 'px';
+  chip.style.setProperty('--fly-x', (potRect.left - rect.left) * 0.3 + 'px');
+  document.body.appendChild(chip);
+  SFX.chip();
+  setTimeout(() => chip.remove(), 700);
+}
+
+function spawnGiftFly(targetEl, emoji) {
+  if (!targetEl) return;
+  const rect = targetEl.getBoundingClientRect();
+  const gift = document.createElement('div');
+  gift.className = 'flying-gift';
+  gift.textContent = emoji;
+  gift.style.left = (rect.left + rect.width / 2 - 14) + 'px';
+  gift.style.top = (rect.top) + 'px';
+  document.body.appendChild(gift);
+  setTimeout(() => gift.remove(), 2200);
+}
+
+// ===== PLAYER INTERACTION =====
+let interactTarget = null;
+const interactPanel = $('interactPanel');
+
+function showInteractPanel(playerId, seatEl) {
+  if (!interactPanel || !seatEl) return;
+  interactTarget = playerId;
+  const rect = seatEl.getBoundingClientRect();
+  interactPanel.style.left = Math.min(rect.right + 8, window.innerWidth - 140) + 'px';
+  interactPanel.style.top = Math.max(rect.top - 20, 8) + 'px';
+  interactPanel.classList.add('active');
+}
+
+function hideInteractPanel() {
+  if (interactPanel) interactPanel.classList.remove('active');
+  interactTarget = null;
+}
+
+if (interactPanel) {
+  interactPanel.addEventListener('click', (e) => {
+    const btn = e.target.closest('.interact-btn');
+    if (!btn || !interactTarget) return;
+    const gift = btn.dataset.gift;
+    Net.send('room:interact', { targetId: interactTarget, gift });
+    hideInteractPanel();
+  });
+}
+
+// Close interact panel on outside click
+document.addEventListener('click', (e) => {
+  if (interactPanel && interactPanel.classList.contains('active') && !interactPanel.contains(e.target) && !e.target.closest('.interact-trigger')) {
+    hideInteractPanel();
+  }
+});
+
+// Receive interaction from other players
+Net.on('room:interact', (d) => {
+  if (d.self) {
+    // Sender confirmation: animate gift flying toward target
+    const targetEl = document.querySelector(`[data-player-id="${d.toId}"]`);
+    if (targetEl) spawnGiftFly(targetEl, d.gift || '🌹');
+  } else {
+    // From another player: animate gift flying from sender
+    const seatEl = document.querySelector(`[data-player-id="${d.fromId}"]`);
+    if (seatEl) spawnGiftFly(seatEl, d.gift || '🌹');
+  }
+});
+
+// ===== DAILY CHECK-IN SYSTEM =====
+let myChips = 0;
+let isLoggedIn = false;
+let checkinInfo = null;
+
+function updateChipDisplay(chips) {
+  myChips = chips;
+  const bal = $('chipBalance');
+  const amt = $('chipAmount');
+  if (bal && amt) {
+    bal.style.display = 'inline-flex';
+    amt.textContent = chips.toLocaleString();
+  }
+}
+
+function showCheckinBtn(show) {
+  const btn = $('checkinBtn');
+  if (btn) btn.style.display = show ? 'inline-flex' : 'none';
+}
+
+function renderCheckinGrid(recentDays) {
+  const grid = $('checkinGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  recentDays.forEach(d => {
+    const dayEl = document.createElement('div');
+    dayEl.className = 'checkin-day';
+    if (d.completed) dayEl.classList.add('completed');
+    if (d.current) dayEl.classList.add('current');
+    dayEl.innerHTML = `
+      <div class="day-num">${d.label}</div>
+      <div class="day-chips">+${d.chips}</div>
+      <div class="day-icon">${d.completed ? '✅' : d.current ? '🎁' : '🔒'}</div>
+    `;
+    grid.appendChild(dayEl);
+  });
+}
+
+function openCheckinModal() {
+  const modal = $('checkinModal');
+  if (!modal) return;
+  // Request fresh check-in info
+  Net.send('user:checkinInfo', {});
+  modal.classList.add('active');
+}
+
+function closeCheckinModal() {
+  const modal = $('checkinModal');
+  if (modal) modal.classList.remove('active');
+}
+
+function showRewardAnimation(chips, label) {
+  const popup = $('checkinRewardPopup');
+  const num = $('rewardNum');
+  const lbl = $('rewardLabel');
+  if (!popup || !num || !lbl) return;
+  num.textContent = `+${chips}`;
+  lbl.textContent = label;
+  popup.style.display = 'block';
+  popup.querySelector('.reward-num').style.animation = 'none';
+  popup.querySelector('.reward-label').style.animation = 'none';
+  void popup.offsetWidth; // reflow
+  popup.querySelector('.reward-num').style.animation = 'rewardPopIn 0.6s ease forwards';
+  popup.querySelector('.reward-label').style.animation = 'rewardPopIn 0.6s 0.2s ease both';
+  setTimeout(() => {
+    popup.querySelector('.reward-num').style.animation = 'rewardFadeUp 0.5s ease forwards';
+    popup.querySelector('.reward-label').style.animation = 'rewardFadeUp 0.5s 0.1s ease both';
+    setTimeout(() => { popup.style.display = 'none'; }, 600);
+  }, 1800);
+  SFX.chip();
+}
+
+// Claim check-in reward
+Net.on('user:checkin', (d) => {
+  if (d.error) {
+    if (d.alreadyCheckedIn) {
+      const btn = $('checkinClaimBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '今日已签到'; }
+      const checkinBtn = $('checkinBtn');
+      if (checkinBtn) { checkinBtn.classList.add('done'); checkinBtn.innerHTML = '✅ 已签到'; }
+    }
+    return;
+  }
+  if (d.success) {
+    updateChipDisplay(d.totalChips);
+    showRewardAnimation(d.reward, d.rewardLabel);
+    const btn = $('checkinClaimBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '✅ 已签到'; }
+    const checkinBtn = $('checkinBtn');
+    if (checkinBtn) { checkinBtn.classList.add('done'); checkinBtn.innerHTML = '✅ 已签到'; }
+    // Update streak display
+    const streakEl = $('checkinStreak');
+    if (streakEl) streakEl.innerHTML = `连续签到 <span>${d.streak}</span> 天`;
+    if (d.recentDays) renderCheckinGrid(d.recentDays);
+  }
+});
+
+// Check-in info response
+Net.on('user:checkinInfo', (d) => {
+  checkinInfo = d;
+  if (d.recentDays) renderCheckinGrid(d.recentDays);
+  const streakEl = $('checkinStreak');
+  if (streakEl) streakEl.innerHTML = `连续签到 <span>${d.streak || 0}</span> 天`;
+  const btn = $('checkinClaimBtn');
+  if (btn) {
+    if (d.alreadyCheckedIn) { btn.disabled = true; btn.textContent = '今日已签到'; }
+    else { btn.disabled = false; btn.textContent = '签到领取'; }
+  }
+  // Update lobby checkin button state
+  const checkinBtn = $('checkinBtn');
+  if (checkinBtn) {
+    if (d.alreadyCheckedIn) { checkinBtn.classList.add('done'); checkinBtn.innerHTML = '✅ 已签到'; }
+    else { checkinBtn.classList.remove('done'); checkinBtn.innerHTML = '📅 签到'; }
+  }
+  // Auto-open modal if not checked in today and on lobby screen
+  if (!d.alreadyCheckedIn && $('lobbyScreen') && $('lobbyScreen').classList.contains('active')) {
+    setTimeout(() => openCheckinModal(), 800);
+  }
+});
+
+// Check-in button handlers
+if ($('checkinBtn')) {
+  $('checkinBtn').addEventListener('click', () => {
+    if ($('checkinBtn').classList.contains('done')) return;
+    openCheckinModal();
+  });
+}
+if ($('checkinClose')) $('checkinClose').addEventListener('click', closeCheckinModal);
+if ($('checkinModal')) {
+  $('checkinModal').addEventListener('click', (e) => { if (e.target === $('checkinModal')) closeCheckinModal(); });
+}
+if ($('checkinClaimBtn')) {
+  $('checkinClaimBtn').addEventListener('click', () => {
+    const btn = $('checkinClaimBtn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = '签到中...';
+    Net.send('user:checkin', {});
+  });
+}
+
+// ===== AVATAR SELECTOR SYSTEM =====
+const AVATAR_OPTIONS = ['🦊','🐯','🐻','🦅','🐬','🦁','🐼','🐸','🦄','🐲','👻','🤖','🧙','🥷','🎭','💀','🐺','🦇'];
+const COLOR_OPTIONS = ['#4fc3f7','#ff7043','#66bb6a','#ffd54f','#ab47bc','#26c6da','#ef5350','#ec407a','#ff8a65','#aed581','#4dd0e1','#b39ddb'];
+let selectedAvatar = '🦊';
+let selectedColor = '#4fc3f7';
+
+function initAvatarSelector() {
+  const avatarGrid = $('avatarGrid');
+  const colorGrid = $('colorGrid');
+  if (!avatarGrid || !colorGrid) return;
+
+  // Render avatar options
+  avatarGrid.innerHTML = '';
+  AVATAR_OPTIONS.forEach(av => {
+    const opt = document.createElement('div');
+    opt.className = 'avatar-option' + (av === selectedAvatar ? ' selected' : '');
+    opt.textContent = av;
+    opt.addEventListener('click', () => {
+      avatarGrid.querySelectorAll('.avatar-option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      selectedAvatar = av;
+      updateAvatarPreview();
+    });
+    avatarGrid.appendChild(opt);
+  });
+
+  // Render color options
+  colorGrid.innerHTML = '';
+  COLOR_OPTIONS.forEach(color => {
+    const opt = document.createElement('div');
+    opt.className = 'color-option' + (color === selectedColor ? ' selected' : '');
+    opt.style.background = color;
+    opt.style.color = color;
+    opt.addEventListener('click', () => {
+      colorGrid.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      selectedColor = color;
+      updateAvatarPreview();
+    });
+    colorGrid.appendChild(opt);
+  });
+
+  updateAvatarPreview();
+}
+
+function updateAvatarPreview() {
+  const circle = $('avatarPreviewCircle');
+  if (circle) {
+    circle.textContent = selectedAvatar;
+    circle.style.borderColor = selectedColor;
+    circle.style.boxShadow = `0 0 20px ${selectedColor}44`;
+  }
+}
+
+function openAvatarModal() {
+  const modal = $('avatarModal');
+  if (!modal) return;
+  // Sync current selection
+  if (userProfile) {
+    selectedAvatar = userProfile.avatar || '🦊';
+    selectedColor = userProfile.avatarColor || '#4fc3f7';
+  }
+  initAvatarSelector();
+  modal.classList.add('active');
+}
+
+function closeAvatarModal() {
+  const modal = $('avatarModal');
+  if (modal) modal.classList.remove('active');
+}
+
+// Avatar button
+if ($('avatarBtn')) {
+  $('avatarBtn').addEventListener('click', openAvatarModal);
+}
+if ($('avatarClose')) $('avatarClose').addEventListener('click', closeAvatarModal);
+if ($('avatarModal')) {
+  $('avatarModal').addEventListener('click', (e) => { if (e.target === $('avatarModal')) closeAvatarModal(); });
+}
+if ($('avatarSaveBtn')) {
+  $('avatarSaveBtn').addEventListener('click', () => {
+    Net.send('user:setAvatar', { avatar: selectedAvatar, color: selectedColor });
+    userProfile.avatar = selectedAvatar;
+    userProfile.avatarColor = selectedColor;
+    const ab = $('avatarBtn');
+    if (ab) ab.textContent = selectedAvatar + ' 换装';
+    closeAvatarModal();
+    toast('头像已保存');
+  });
+}
+
+// Avatar updated from server
+Net.on('user:avatarUpdated', (d) => {
+  if (userProfile) {
+    userProfile.avatar = d.avatar;
+    userProfile.avatarColor = d.avatarColor;
+  }
+  selectedAvatar = d.avatar;
+  selectedColor = d.avatarColor;
+});
+
+// Show avatar button when logged in
+function showAvatarBtn(show) {
+  const btn = $('avatarBtn');
+  if (btn) {
+    btn.style.display = show ? 'inline-flex' : 'none';
+    if (show && userProfile) {
+      btn.textContent = (userProfile.avatar || '🦊') + ' 换装';
+    }
+  }
+}
+
+// ===== TABLE SCENE SELECTOR =====
+const TABLE_SCENES = [
+  { id: 'classic',     name: '经典绿毡',     desc: 'Casino Classic',    cls: 'scene-classic',     preview: 'linear-gradient(135deg,#1a6b3c,#0f4d2a)' },
+  { id: 'macau',       name: '澳门永利',     desc: 'Wynn Macau',        cls: 'scene-macau',       preview: 'linear-gradient(135deg,#6b5a1a,#4d400f)' },
+  { id: 'vegas',       name: '拉斯维加斯',   desc: 'Las Vegas Strip',   cls: 'scene-vegas',       preview: 'linear-gradient(135deg,#8b1a1a,#6b0f0f)' },
+  { id: 'monaco',      name: '摩纳哥',       desc: 'Monte Carlo',       cls: 'scene-monaco',      preview: 'linear-gradient(135deg,#1a4a6b,#0f3550)' },
+  { id: 'underground', name: '地下赌场',     desc: 'Underground',       cls: 'scene-underground',  preview: 'linear-gradient(135deg,#2a2a2a,#1a1a1a)' },
+  { id: 'atlantic',    name: '大西洋城',     desc: 'Atlantic City',     cls: 'scene-atlantic',     preview: 'linear-gradient(135deg,#1a6b6b,#0f4d4d)' },
+  { id: 'club',        name: '私人会所',     desc: 'Private Club',      cls: 'scene-club',         preview: 'linear-gradient(135deg,#6b1a3c,#4d0f2a)' },
+  { id: 'royale',      name: '皇家赌场',     desc: 'Casino Royale',     cls: 'scene-royale',       preview: 'linear-gradient(135deg,#0a0a0a,#d4a840)' },
+  { id: 'space',       name: '太空舱',       desc: 'Space Station',     cls: 'scene-space',        preview: 'linear-gradient(135deg,#2a1a5a,#1a0f40)' },
+  { id: 'bamboo',      name: '竹林雅室',     desc: 'Bamboo Room',       cls: 'scene-bamboo',       preview: 'linear-gradient(135deg,#3a6b3c,#2a4d2a)' },
+];
+
+let currentScene = 'classic';
+
+function initSceneSelector() {
+  const grid = $('sceneGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  TABLE_SCENES.forEach(scene => {
+    const opt = document.createElement('div');
+    opt.className = 'scene-option' + (scene.id === currentScene ? ' selected' : '');
+    opt.innerHTML = `
+      <div class="scene-preview" style="background:${scene.preview}"></div>
+      <div class="scene-name">${scene.name}</div>
+      <div class="scene-desc">${scene.desc}</div>
+    `;
+    opt.addEventListener('click', () => {
+      selectScene(scene.id);
+      grid.querySelectorAll('.scene-option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+    });
+    grid.appendChild(opt);
+  });
+}
+
+function selectScene(sceneId) {
+  currentScene = sceneId;
+  const container = $('table-container');
+  if (!container) return;
+  // Remove all scene classes
+  TABLE_SCENES.forEach(s => container.classList.remove(s.cls));
+  // Apply selected scene
+  const scene = TABLE_SCENES.find(s => s.id === sceneId);
+  if (scene) container.classList.add(scene.cls);
+}
+
+function openSceneModal() {
+  initSceneSelector();
+  const modal = $('sceneModal');
+  if (modal) modal.classList.add('active');
+}
+
+function closeSceneModal() {
+  const modal = $('sceneModal');
+  if (modal) modal.classList.remove('active');
+}
+
+if ($('sceneBtn')) $('sceneBtn').addEventListener('click', openSceneModal);
+if ($('sceneClose')) $('sceneClose').addEventListener('click', closeSceneModal);
+if ($('sceneModal')) $('sceneModal').addEventListener('click', (e) => { if (e.target === $('sceneModal')) closeSceneModal(); });
+
+// ===== FORTUNE TELLING & TAROT =====
+const FORTUNES = [
+  '今日财运亨通，适合大胆出手。', '贵人相助在即，耐心等待转机。', '桃花运旺盛，注意身边有缘人。',
+  '近期有意外之财，保持开放心态。', '此时不宜冒进，稳扎稳打为上。', '三日之内必有惊喜降临。',
+  '你的直觉很准，相信自己内心的声音。', '一段重要的关系即将迎来转折。', '放下执念，方能遇见更好的机遇。',
+  '今日宜：冒险、社交、学习新事物。', '宇宙正在为你安排最好的剧本。', '前方有阻碍，但绕道而行会更顺利。',
+  '你的努力即将得到回报，再坚持一下。', '今日牌运不错，但见好就收为妙。', '一个老朋友会带来好消息。',
+  '财运平稳上升中，大额投入需谨慎。', '本月是你的人生转折点，好好把握。', '静水流深，低调行事必有收获。',
+  '今天适合做重要决定，直觉特别敏锐。', '有人正在暗中关注你，保持最佳状态。', '一次旅行或新体验会带来灵感。',
+  '不要忽视小细节，魔鬼藏在细节里。', '你的善良正在积累福报，好运将至。', '今日运势：⭐⭐⭐⭐⭐ 大吉！',
+];
+
+const TAROT_DECK = [
+  { name:'愚者', emoji:'🃏', meaning:'新的开始，充满无限可能。代表冒险精神和纯真的信念。' },
+  { name:'魔术师', emoji:'🎩', meaning:'你拥有创造现实的能力。主动出击，展现你的才华。' },
+  { name:'女祭司', emoji:'🌙', meaning:'直觉和内在智慧正在引导你。倾听内心的声音。' },
+  { name:'女皇', emoji:'👑', meaning:'丰收与滋养。物质和精神都在茁壮成长。' },
+  { name:'皇帝', emoji:'🏛️', meaning:'掌控与权威。是时候建立秩序和规则了。' },
+  { name:'教皇', emoji:'📿', meaning:'传统与智慧的传承。向有经验的人请教。' },
+  { name:'恋人', emoji:'💕', meaning:'重要的选择在眼前。跟随内心，选择真爱与真实。' },
+  { name:'战车', emoji:'🏎️', meaning:'胜利与意志力。坚持方向，勇往直前。' },
+  { name:'力量', emoji:'🦁', meaning:'内在的力量与勇气。以柔克刚，温柔而坚定。' },
+  { name:'隐者', emoji:'🏔️', meaning:'独处与内省。给自己时间思考和反思。' },
+  { name:'命运之轮', emoji:'🎡', meaning:'命运的转折。好运正在向你走来。' },
+  { name:'正义', emoji:'⚖️', meaning:'公正与平衡。因果循环，种什么得什么。' },
+  { name:'倒吊人', emoji:'🙃', meaning:'换个角度看问题。暂时的牺牲会带来更大的收获。' },
+  { name:'死神', emoji:'💀', meaning:'结束与重生。旧的篇章正在翻过，新生即将来临。' },
+  { name:'节制', emoji:'🏺', meaning:'平衡与耐心。调和各方面的力量，找到中庸之道。' },
+  { name:'恶魔', emoji:'😈', meaning:'诱惑与束缚。警惕沉迷和执着，保持清醒。' },
+  { name:'高塔', emoji:'🗼', meaning:'突变与觉醒。虽然震荡剧烈，但这是必要的重建。' },
+  { name:'星星', emoji:'⭐', meaning:'希望与灵感。黑暗之后必有光明，保持信念。' },
+  { name:'月亮', emoji:'🌕', meaning:'幻象与直觉。事情可能不如表面看到的那样，相信直觉。' },
+  { name:'太阳', emoji:'☀️', meaning:'成功与喜悦。光明正大的好运正在照耀你。' },
+  { name:'审判', emoji:'📯', meaning:'觉醒与重生。听从内心的召唤，做出重要改变。' },
+  { name:'世界', emoji:'🌍', meaning:'圆满与成就。一个周期即将完美结束，新的旅程即将开始。' },
+];
+
+// Fortune modal handlers
+if ($('fortuneBtn')) $('fortuneBtn').addEventListener('click', () => { $('fortuneModal').classList.add('active'); });
+if ($('fortuneClose')) $('fortuneClose').addEventListener('click', () => { $('fortuneModal').classList.remove('active'); });
+if ($('fortuneModal')) $('fortuneModal').addEventListener('click', (e) => { if (e.target === $('fortuneModal')) $('fortuneModal').classList.remove('active'); });
+
+// Tab switching
+document.querySelectorAll('.fortune-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.fortune-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const isTarot = tab.dataset.tab === 'tarot';
+    $('crystalTab').style.display = isTarot ? 'none' : '';
+    $('tarotTab').style.display = isTarot ? '' : 'none';
+  });
+});
+
+// Crystal ball fortune
+if ($('fortuneAskBtn')) {
+  $('fortuneAskBtn').addEventListener('click', () => {
+    const ball = $('crystalBall');
+    const result = $('fortuneResult');
+    const btn = $('fortuneAskBtn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = '占卜中...';
+    ball.classList.add('animating');
+    result.style.display = 'none';
+    setTimeout(() => {
+      ball.classList.remove('animating');
+      const fortune = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
+      result.textContent = '🔮 ' + fortune;
+      result.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '再次占卜';
+    }, 2000 + Math.random() * 1500);
+  });
+}
+
+// Tarot card draw
+let tarotDrawn = null;
+if ($('tarotDrawBtn')) {
+  $('tarotDrawBtn').addEventListener('click', () => {
+    // Reset cards
+    const cards = document.querySelectorAll('.tarot-card');
+    const names = [document.getElementById('tarotName0'), document.getElementById('tarotName1'), document.getElementById('tarotName2')];
+    cards.forEach(c => { c.className = 'tarot-card face-down'; c.innerHTML = ''; });
+    names.forEach(n => { if (n) n.textContent = ''; });
+    $('tarotReading').style.display = 'none';
+
+    // Shuffle and pick 3
+    const shuffled = [...TAROT_DECK].sort(() => Math.random() - 0.5);
+    tarotDrawn = shuffled.slice(0, 3);
+
+    // Reveal cards one by one with delay
+    tarotDrawn.forEach((card, i) => {
+      setTimeout(() => {
+        const cardEl = cards[i];
+        cardEl.classList.remove('face-down');
+        cardEl.classList.add('revealed');
+        cardEl.innerHTML = `<span class="tarot-emoji">${card.emoji}</span>`;
+        if (names[i]) names[i].textContent = card.name;
+        // After all revealed, show reading
+        if (i === 2) {
+          setTimeout(() => {
+            const labels = ['过去', '现在', '未来'];
+            let reading = '';
+            tarotDrawn.forEach((c, j) => {
+              reading += `【${labels[j]}·${c.name}】${c.meaning}\n\n`;
+            });
+            $('tarotReading').textContent = reading.trim();
+            $('tarotReading').style.display = 'block';
+          }, 600);
+        }
+      }, (i + 1) * 800);
+    });
+  });
+}
+
+// ===== VOICE ANNOUNCEMENT SYSTEM (Web Speech API) =====
+const VoiceAnnounce = (() => {
+  let enabled = false;
+  let lastAnnounce = 0;
+  try { enabled = localStorage.getItem('poker_voiceAnnounce') === 'true'; } catch {}
+
+  function speak(text) {
+    if (!enabled) return;
+    if (!window.speechSynthesis) return;
+    const now = Date.now();
+    if (now - lastAnnounce < 800) return;
+    lastAnnounce = now;
+    try {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'zh-CN';
+      utter.rate = 1.1;
+      utter.volume = 0.8;
+      window.speechSynthesis.speak(utter);
+    } catch {}
+  }
+
+  return {
+    toggle() {
+      enabled = !enabled;
+      try { localStorage.setItem('poker_voiceAnnounce', enabled ? 'true' : 'false'); } catch {}
+      if (!enabled && window.speechSynthesis) window.speechSynthesis.cancel();
+      return enabled;
+    },
+    isEnabled() { return enabled; },
+    yourTurn() { speak('轮到你了'); },
+    playerAction(name, action) {
+      const actionNames = { fold: '弃牌', check: '过牌', call: '跟注', raise: '加注', allin: '全押' };
+      const actionText = actionNames[action] || action;
+      speak(name + ' ' + actionText);
+    }
+  };
+})();
+
+function updateVoiceAnnounceUI() {
+  const btn = $('voiceAnnounceToggle');
+  if (VoiceAnnounce.isEnabled()) btn.classList.add('active');
+  else btn.classList.remove('active');
+}
+updateVoiceAnnounceUI();
+
+$('voiceAnnounceToggle').addEventListener('click', () => {
+  VoiceAnnounce.toggle();
+  updateVoiceAnnounceUI();
+  toast(VoiceAnnounce.isEnabled() ? '语音播报已开启' : '语音播报已关闭');
+});
+
 // ===== WIN PARTICLES =====
 function spawnWinParticles(targetEl) {
   if (!targetEl) return;
@@ -1100,6 +2337,11 @@ function renderGame(state) {
       else if (p.lastAction === 'call') SFX.call();
       else if (p.lastAction === 'raise') SFX.raise();
       else if (p.lastAction === 'allin') SFX.allin();
+
+      // Voice announcement for other players' actions
+      if (p.id !== Net.playerId && p.lastAction !== 'winner') {
+        VoiceAnnounce.playerAction(p.name, p.lastAction);
+      }
     }
   }
 
@@ -1128,6 +2370,30 @@ function renderGame(state) {
 
   table.querySelectorAll('.seat,.dealer-btn,.blind-btn').forEach(el => el.remove());
 
+  const me_ = state.players.find(p => p.id === Net.playerId);
+  const isMyTurn = me_ && state.currentIdx !== undefined && state.players[state.currentIdx] &&
+    state.players[state.currentIdx].id === Net.playerId && state.phase !== 'showdown' && state.phase !== 'idle';
+  if (isMyTurn) table.classList.add('table-your-turn');
+  else table.classList.remove('table-your-turn');
+  const turnLabel = $('turnLabel');
+  if (isMyTurn) turnLabel.classList.add('visible');
+  else turnLabel.classList.remove('visible');
+
+  // Fallback: if it's my turn but action panel not showing, show it from game state
+  if (isMyTurn && me_ && !$('actionPanel').classList.contains('active') && state.phase !== 'showdown' && state.phase !== 'idle') {
+    const toCall = (state.roundBet || 0) - (me_.bet || 0);
+    showActions({
+      playerId: Net.playerId,
+      toCall: Math.max(0, toCall),
+      minRaise: (state.roundBet || 0) + 20, // approximate
+      maxRaise: me_.stack + me_.bet,
+      pot: state.pot,
+      gameMode: state.gameMode || 'classic',
+      allInOrFold: false,
+    });
+    SFX.yourTurn();
+  }
+
   const me = state.players.find(p => p.id === Net.playerId);
   // Detect if my hand cards actually changed (new deal vs re-render)
   const currentHandIds = me?.hand?.filter(c => c).map(c => c.suit + '-' + c.rank).join(',') || '';
@@ -1141,6 +2407,7 @@ function renderGame(state) {
   state.players.forEach((p, i) => {
     const seat = document.createElement('div');
     seat.className = `seat seat-${i}`;
+    seat.dataset.playerId = p.id;
     if (p.folded) seat.classList.add('folded');
     if (!p.connected) seat.classList.add('disconnected');
     if (state.currentIdx === i && state.phase !== 'showdown' && state.phase !== 'idle') seat.classList.add('active');
@@ -1185,16 +2452,47 @@ function renderGame(state) {
 
     const info = document.createElement('div');
     info.className = 'seat-info';
+    // Player color for this seat
+    const seatColor = p.avatarColor || PLAYER_COLORS[i % PLAYER_COLORS.length];
+    const seatAvatar = p.avatar || PLAYER_AVATARS[i % PLAYER_AVATARS.length];
+
+    // Apply player color to seat-info
+    info.style.borderLeftWidth = '3px';
+    info.style.borderLeftStyle = 'solid';
+    info.style.borderLeftColor = seatColor;
+    const isActive_ = state.currentIdx === i && state.phase !== 'showdown' && state.phase !== 'idle';
+    if (isActive_) {
+      info.style.borderColor = seatColor;
+      info.style.borderLeftColor = seatColor;
+      info.style.boxShadow = `0 0 20px ${seatColor}66, 0 0 40px ${seatColor}33`;
+    }
+    if (p.lastAction === 'winner') {
+      info.style.borderColor = '#40e080';
+      info.style.boxShadow = '0 0 24px rgba(64,224,128,0.4)';
+    }
+
     const actionMap = {fold:'弃牌',check:'过牌',call:'跟注',raise:'加注',allin:'ALL IN',winner:'🏆 WIN'};
     const actionClass = p.lastAction ? `act-${p.lastAction}` : '';
     info.innerHTML = `
-      <div class="seat-name">${p.name}${p.isBot?' <span class="bot-badge">BOT</span>':''}${p.id===Net.playerId?' (你)':''}<span class="voice-indicator" id="voice-ind-${p.id}" style="display:none"></span></div>
+      <div class="seat-name" style="color:${seatColor}"><span style="color:${seatColor}">●</span> ${seatAvatar} ${p.name}${p.isBot?' <span class="bot-badge">BOT</span>':''}${p.id===Net.playerId?' (你)':''}<span class="voice-indicator" id="voice-ind-${p.id}" style="display:none"></span></div>
       <div class="seat-stack">${p.stack}</div>
       <div class="seat-action ${actionClass} ${p.lastAction ? 'seat-action-anim' : ''}">${actionMap[p.lastAction]||''}</div>
     `;
 
     if (p.id === Net.playerId) { seat.appendChild(cardsDiv); seat.appendChild(info); }
-    else { seat.appendChild(info); seat.appendChild(cardsDiv); }
+    else {
+      seat.appendChild(info); seat.appendChild(cardsDiv);
+      // Add interact trigger button for other players
+      const trigBtn = document.createElement('div');
+      trigBtn.className = 'interact-trigger';
+      trigBtn.textContent = '😊';
+      trigBtn.style.right = '4px'; trigBtn.style.top = '50%'; trigBtn.style.transform = 'translateY(-50%)';
+      trigBtn.addEventListener('click', (e) => { e.stopPropagation(); showInteractPanel(p.id, seat); });
+      seat.appendChild(trigBtn);
+      // Show on hover (desktop) or always on mobile
+      if (window.innerWidth > 700) { seat.style.position = 'relative'; trigBtn.style.display = 'none'; seat.addEventListener('mouseenter', () => trigBtn.style.display = 'flex'); seat.addEventListener('mouseleave', () => { if (!interactPanel.classList.contains('active')) trigBtn.style.display = 'none'; }); }
+      else { trigBtn.style.display = 'flex'; }
+    }
 
     if (p.bet > 0) {
       const bet = document.createElement('div');
@@ -1213,26 +2511,36 @@ function renderGame(state) {
     container.appendChild(myHandEl);
   }
 
+  const isMobile = window.innerWidth <= 700;
+
   // Dealer button
   const dBtn = document.createElement('div'); dBtn.className = 'dealer-btn'; dBtn.textContent = 'D';
-  const dp = [{bottom:'55px',left:'calc(50% + 60px)'},{left:'120px',top:'calc(40% + 40px)'},{left:'calc(15% + 70px)',top:'45px'},{right:'calc(15% + 70px)',top:'45px'},{right:'120px',top:'calc(40% + 40px)'},{left:'50%',top:'45px',transform:'translateX(-50%)'}];
+  const dpDesktop = [{bottom:'55px',left:'calc(50% + 60px)'},{left:'120px',top:'calc(40% + 40px)'},{left:'calc(15% + 70px)',top:'45px'},{right:'calc(15% + 70px)',top:'45px'},{right:'120px',top:'calc(40% + 40px)'},{left:'50%',top:'45px',transform:'translateX(-50%)'}];
+  const dpMobile = [{bottom:'55px',left:'calc(50% + 50px)'},{left:'80px',top:'calc(40% + 30px)'},{left:'calc(10% + 50px)',top:'30px'},{right:'calc(10% + 50px)',top:'30px'},{right:'80px',top:'calc(40% + 30px)'},{left:'50%',top:'30px',transform:'translateX(-50%)'}];
+  const dp = isMobile ? dpMobile : dpDesktop;
   Object.assign(dBtn.style, dp[state.dealerIdx] || dp[0]);
   table.appendChild(dBtn);
 
-  // Small blind button
+  // Small blind button — attach to seat
   if (state.sbIdx !== undefined && state.sbIdx !== null) {
-    const sbBtn = document.createElement('div'); sbBtn.className = 'blind-btn blind-sb'; sbBtn.textContent = 'SB';
-    const sbOffset = [{bottom:'40px',left:'calc(50% + 45px)'},{left:'105px',top:'calc(40% + 25px)'},{left:'calc(15% + 55px)',top:'30px'},{right:'calc(15% + 55px)',top:'30px'},{right:'105px',top:'calc(40% + 25px)'},{left:'calc(50% - 15px)',top:'30px'}];
-    Object.assign(sbBtn.style, sbOffset[state.sbIdx] || sbOffset[0]);
-    table.appendChild(sbBtn);
+    const sbSeat = table.querySelector(`.seat-${state.sbIdx}`);
+    if (sbSeat) {
+      const sbBtn = document.createElement('div'); sbBtn.className = 'blind-btn blind-sb'; sbBtn.textContent = 'SB';
+      sbBtn.style.position = 'absolute'; sbBtn.style.top = '-8px'; sbBtn.style.right = '-4px';
+      sbSeat.style.position = 'relative';
+      sbSeat.appendChild(sbBtn);
+    }
   }
 
-  // Big blind button
+  // Big blind button — attach to seat
   if (state.bbIdx !== undefined && state.bbIdx !== null) {
-    const bbBtn = document.createElement('div'); bbBtn.className = 'blind-btn blind-bb'; bbBtn.textContent = 'BB';
-    const bbOffset = [{bottom:'40px',left:'calc(50% + 25px)'},{left:'90px',top:'calc(40% + 10px)'},{left:'calc(15% + 40px)',top:'15px'},{right:'calc(15% + 40px)',top:'15px'},{right:'90px',top:'calc(40% + 10px)'},{left:'calc(50% + 15px)',top:'15px'}];
-    Object.assign(bbBtn.style, bbOffset[state.bbIdx] || bbOffset[0]);
-    table.appendChild(bbBtn);
+    const bbSeat = table.querySelector(`.seat-${state.bbIdx}`);
+    if (bbSeat) {
+      const bbBtn = document.createElement('div'); bbBtn.className = 'blind-btn blind-bb'; bbBtn.textContent = 'BB';
+      bbBtn.style.position = 'absolute'; bbBtn.style.top = '-8px'; bbBtn.style.right = '-4px';
+      bbSeat.style.position = 'relative';
+      bbSeat.appendChild(bbBtn);
+    }
   }
 
   // Community cards with flip animation
@@ -1295,6 +2603,8 @@ function updateHandLabel(state) {
 // ===== ACTION PANEL =====
 function showActions(data) {
   const panel = $('actionPanel');
+  // Reset custom raise input
+  const customInput = $('customRaiseInput'); if (customInput) customInput.style.display = 'none';
   if (data.allInOrFold) {
     $('btnCheck').style.display = 'none';
     $('btnCall').style.display = 'none';
@@ -1316,11 +2626,16 @@ function showActions(data) {
   $('raiseValue').textContent = data.minRaise;
   panel.classList.add('active');
   $('table-container').classList.add('action-active');
+  VoiceAnnounce.yourTurn();
 }
 
 function hideActions() {
   $('actionPanel').classList.remove('active');
   $('table-container').classList.remove('action-active');
+  const table = $('table'); if (table) table.classList.remove('table-your-turn');
+  const turnLabel = $('turnLabel'); if (turnLabel) turnLabel.classList.remove('visible');
+  const customInput = $('customRaiseInput'); if (customInput) customInput.style.display = 'none';
+  stopTurnTimer();
 }
 
 // ===== NETWORK EVENT HANDLERS =====
@@ -1373,7 +2688,7 @@ Net.on('room:players', (d) => {
     else badge = '<div class="rp-badge">等待中</div>';
 
     card.innerHTML = `
-      <div class="rp-name">${p.name}${p.id===Net.playerId?' (你)':''}</div>
+      <div class="rp-name">${p.avatar || '🦊'} ${p.name}${p.id===Net.playerId?' (你)':''}</div>
       <div class="rp-stack">${p.stack}</div>
       ${badge}
     `;
@@ -1496,8 +2811,8 @@ Net.on('room:destroyed', () => {
 Net.on('game:state', (state) => renderGame(state));
 
 Net.on('game:yourTurn', (d) => {
-  if (isSpectator) return; // Spectators don't act
-  if (d.playerId !== Net.playerId) return; // Not my turn — don't show panel
+  if (isSpectator) return;
+  if (d.playerId !== Net.playerId) return;
   showActions(d);
   SFX.yourTurn();
   if (navigator.vibrate) navigator.vibrate(100);
@@ -1532,18 +2847,26 @@ Net.on('game:showdown', (d) => {
 
 Net.on('game:handEnd', (d) => {
   hideActions();
-  const winners = d.winners.map(w => `${w.name} +${w.amount}`).join(', ');
-  toast(`本手结束: ${winners}`);
+  hideNextHandBar();
   const myId = Net.playerId;
   const iWon = d.winners.some(w => w.id === myId);
   if (iWon) SFX.win(); else SFX.lose();
-  // Win particles for me
-  if (iWon) {
-    setTimeout(() => {
-      const mySeat = document.querySelector(`.seat.winner .seat-info`);
-      if (mySeat) spawnWinParticles(mySeat);
-    }, 200);
+
+  // Show settlement overlay
+  if (d.winners.length > 0) {
+    showSettlement(d.winners);
+    if (iWon) {
+      setTimeout(() => {
+        const mySeat = document.querySelector('.seat.winner .seat-info');
+        if (mySeat) spawnWinParticles(mySeat);
+      }, 200);
+    }
   }
+});
+
+Net.on('game:waitingForNext', (d) => {
+  $('settlementOverlay').classList.remove('active');
+  showNextHandBar(d.nextHandDelay || 15);
 });
 
 Net.on('error', (d) => toast(d.message));
@@ -1563,7 +2886,13 @@ Net.on('user:registered', (d) => {
   Net.playerId = d.playerId;
   Net.playerName = d.username;
   updateUserArea();
+  // Show chip balance and check-in
+  if (d.profile && d.profile.chips !== undefined) updateChipDisplay(d.profile.chips);
+  showCheckinBtn(true);
+  showAvatarBtn(true);
   toast('注册成功！欢迎 ' + d.username);
+  // Auto-request check-in info and open modal if not checked in
+  setTimeout(() => { Net.send('user:checkinInfo', {}); }, 500);
 });
 
 Net.on('user:loggedIn', (d) => {
@@ -1575,7 +2904,13 @@ Net.on('user:loggedIn', (d) => {
   Net.playerName = d.username;
   $('nameInput').value = d.username;
   updateUserArea();
+  // Show chip balance and check-in
+  if (d.profile && d.profile.chips !== undefined) updateChipDisplay(d.profile.chips);
+  showCheckinBtn(true);
+  showAvatarBtn(true);
   toast('登录成功！欢迎回来 ' + d.username);
+  // Auto-request check-in info and open modal if not checked in
+  setTimeout(() => { Net.send('user:checkinInfo', {}); }, 500);
 });
 
 Net.on('user:profile', (d) => {
@@ -1600,7 +2935,8 @@ function updateUserArea() {
   const area = $('userArea');
   if (!area) return;
   if (isRegistered && userProfile) {
-    area.innerHTML = '<div class="user-badge" id="userBadgeClick"><span class="user-icon">👤</span>' + userProfile.username + ' · ' + userProfile.stats.handsWon + '胜</div>';
+    const chipsStr = userProfile.chips !== undefined ? ` · 💰${userProfile.chips.toLocaleString()}` : '';
+    area.innerHTML = '<div class="user-badge" id="userBadgeClick"><span class="user-icon">👤</span>' + userProfile.username + ' · ' + userProfile.stats.handsWon + '胜' + chipsStr + '</div>';
     $('userBadgeClick').addEventListener('click', () => {
       $('profileOverlay').classList.add('active');
       Net.send('user:profile');
@@ -1613,6 +2949,7 @@ function updateUserArea() {
 function renderProfile(profile) {
   const s = profile.stats;
   $('profileStats').innerHTML = `
+    <div class="stat-card"><div class="stat-value">${profile.chips || 0}</div><div class="stat-label">💰 筹码</div></div>
     <div class="stat-card"><div class="stat-value">${s.handsPlayed}</div><div class="stat-label">总场次</div></div>
     <div class="stat-card"><div class="stat-value">${s.handsWon}</div><div class="stat-label">胜场</div></div>
     <div class="stat-card"><div class="stat-value">${s.handsPlayed > 0 ? Math.round(s.handsWon/s.handsPlayed*100) : 0}%</div><div class="stat-label">胜率</div></div>
@@ -1685,10 +3022,12 @@ $('createRoomBtn').addEventListener('click', async () => {
 // Bot game button — toggle difficulty panel, then start
 $('botGameBtn').addEventListener('click', async () => {
   const opts = $('botOptions');
+  // First click: show difficulty options
   if (opts.style.display === 'none') {
-    opts.style.display = 'flex';
+    opts.style.display = 'block';
     return;
   }
+  // Second click: start bot game
   const name = $('nameInput').value.trim() || '玩家';
   const difficulty = $('botDifficulty').value;
   showError('');
@@ -1772,13 +3111,150 @@ $('readyBtn').addEventListener('click', () => {
 $('startGameBtn').addEventListener('click', () => Net.send('room:start'));
 
 // Game actions with sound feedback
+// ===== TURN TIMER =====
+let timerInterval = null;
+const TIMER_CIRCUMFERENCE = 125.66;
+
+function startTurnTimer(timeLimit) {
+  stopTurnTimer();
+  const timer = $('turnTimer');
+  const fg = $('timerFg');
+  const num = $('timerNum');
+  if (!timer || !fg || !num) return;
+  timer.classList.add('active');
+  let remaining = timeLimit || 45;
+  num.textContent = remaining;
+  fg.style.strokeDashoffset = '0';
+  fg.classList.remove('warn');
+  num.classList.remove('warn');
+  timerInterval = setInterval(() => {
+    remaining--;
+    if (remaining < 0) remaining = 0;
+    num.textContent = remaining;
+    const offset = TIMER_CIRCUMFERENCE * (1 - remaining / (timeLimit || 45));
+    fg.style.strokeDashoffset = offset;
+    if (remaining <= 5) {
+      fg.classList.add('warn');
+      num.classList.add('warn');
+      if (remaining <= 3 && typeof SFX !== 'undefined') SFX.yourTurn();
+    }
+    if (remaining <= 0) {
+      stopTurnTimer();
+      if ($('actionPanel').classList.contains('active')) {
+        toast('超时自动弃牌');
+        $('btnFold').click();
+      }
+    }
+  }, 1000);
+}
+
+function stopTurnTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  const timer = $('turnTimer');
+  if (timer) timer.classList.remove('active');
+}
+
+// ===== SETTLEMENT OVERLAY =====
+function showSettlement(winners) {
+  const overlay = $('settlementOverlay');
+  if (!overlay || !winners || winners.length === 0) return;
+  const w = winners[0];
+  $('settlementWinner').textContent = w.name || '';
+  $('settlementHand').textContent = w.hand || '';
+  $('settlementAmount').textContent = '+' + (w.amount || 0);
+  overlay.classList.add('active');
+  setTimeout(() => overlay.classList.remove('active'), 8000);
+}
+$('settlementClose').addEventListener('click', () => {
+  $('settlementOverlay').classList.remove('active');
+});
+
+// ===== NEXT HAND BAR =====
+let nextHandCountdown = null;
+function showNextHandBar(delay) {
+  const bar = $('nextHandBar');
+  if (!bar) return;
+  bar.classList.add('active');
+  let remaining = delay;
+  $('nextHandText').textContent = '下一手 ' + remaining + 's';
+  nextHandCountdown = setInterval(() => {
+    remaining--;
+    $('nextHandText').textContent = remaining > 0 ? '下一手 ' + remaining + 's' : '开始中...';
+    if (remaining <= 0) { clearInterval(nextHandCountdown); nextHandCountdown = null; bar.classList.remove('active'); }
+  }, 1000);
+}
+function hideNextHandBar() {
+  if (nextHandCountdown) { clearInterval(nextHandCountdown); nextHandCountdown = null; }
+  const bar = $('nextHandBar');
+  if (bar) bar.classList.remove('active');
+}
+$('nextHandSkip').addEventListener('click', () => {
+  hideNextHandBar();
+  Net.send('game:nextHand', {});
+});
+
+// ===== PRESET RAISE BUTTONS =====
+(function() {
+  const presets = document.getElementById('raisePresets');
+  if (!presets) return;
+  presets.addEventListener('click', (e) => {
+    const btn = e.target.closest('.raise-preset-btn');
+    if (!btn) return;
+    const amount = btn.dataset.amount;
+    if (amount === 'allin') {
+      $('btnAllin').click();
+    } else if (amount === 'custom') {
+      // Show custom input field (triggers keyboard on mobile)
+      const customInput = $('customRaiseInput');
+      if (customInput) {
+        const isShowing = customInput.style.display === 'flex';
+        customInput.style.display = isShowing ? 'none' : 'flex';
+        if (!isShowing) {
+          const inp = $('customRaiseAmount');
+          if (inp) { inp.value = ''; inp.focus(); }
+        }
+      }
+    } else {
+      const val = parseInt(amount);
+      if (!isNaN(val)) {
+        hideActions(); SFX.btnClick();
+        Net.send('game:action', { action: 'raise', amount: val });
+      }
+    }
+  });
+})();
+
+// Custom raise confirm button
+if ($('customRaiseConfirm')) {
+  $('customRaiseConfirm').addEventListener('click', () => {
+    const inp = $('customRaiseAmount');
+    if (!inp) return;
+    const val = parseInt(inp.value);
+    if (isNaN(val) || val <= 0) { toast('请输入有效金额'); return; }
+    hideActions(); SFX.btnClick();
+    Net.send('game:action', { action: 'raise', amount: val });
+  });
+}
+
 $('btnFold').addEventListener('click', () => { hideActions(); SFX.btnClick(); Net.send('game:action', { action: 'fold' }); });
 $('btnCheck').addEventListener('click', () => { hideActions(); SFX.btnClick(); Net.send('game:action', { action: 'check' }); });
-$('btnCall').addEventListener('click', () => { hideActions(); SFX.btnClick(); Net.send('game:action', { action: 'call' }); });
-$('btnAllin').addEventListener('click', () => { hideActions(); SFX.btnClick(); Net.send('game:action', { action: 'allin' }); });
+$('btnCall').addEventListener('click', () => {
+  hideActions(); SFX.btnClick();
+  const mySeat = document.querySelector('.seat-0');
+  if (mySeat) { spawnChipFly(mySeat, '#d4a840'); spawnChipFly(mySeat, '#cc3333'); }
+  Net.send('game:action', { action: 'call' });
+});
+$('btnAllin').addEventListener('click', () => {
+  hideActions(); SFX.btnClick();
+  const mySeat = document.querySelector('.seat-0');
+  if (mySeat) for (let i = 0; i < 6; i++) setTimeout(() => spawnChipFly(mySeat), i * 80);
+  Net.send('game:action', { action: 'allin' });
+});
 $('btnRaise').addEventListener('click', () => {
   const amount = parseInt($('raiseRange').value);
   hideActions(); SFX.btnClick();
+  const mySeat = document.querySelector('.seat-0');
+  if (mySeat) { spawnChipFly(mySeat, '#d4a840'); spawnChipFly(mySeat); setTimeout(() => spawnChipFly(mySeat), 100); }
   Net.send('game:action', { action: 'raise', amount });
 });
 $('raiseRange').addEventListener('input', (e) => { $('raiseValue').textContent = e.target.value; });
@@ -1786,7 +3262,8 @@ $('raiseRange').addEventListener('input', (e) => { $('raiseValue').textContent =
 // ===== SPECTATE BUTTON =====
 let isSpectator = false;
 
-$('spectateBtn').addEventListener('click', async () => {
+$('spectateLink').addEventListener('click', async (e) => {
+  e.preventDefault();
   const name = $('nameInput').value.trim() || '观众';
   const code = $('codeInput').value.trim().toUpperCase();
   showError('');
@@ -1796,6 +3273,50 @@ $('spectateBtn').addEventListener('click', async () => {
     if (!Net.playerId) await Net.auth(name);
     Net.send('room:spectate', { code, name });
   } catch { showError('无法连接到服务器'); }
+});
+
+// ===== CREATE ROOM SCREEN NAVIGATION =====
+(function() {
+  function navigateToCreateScreen(autoLoadRooms) {
+    showScreen('createRoomScreen');
+    if (autoLoadRooms && Net.connected) {
+      Net.send('room:list');
+      toast('加载公开房间...');
+    }
+  }
+
+  const cardLobby = document.getElementById('cardLobby');
+  const cardCreate = document.getElementById('cardCreate');
+
+  if (cardLobby) {
+    cardLobby.addEventListener('click', () => navigateToCreateScreen(true));
+  }
+  if (cardCreate) {
+    cardCreate.addEventListener('click', () => navigateToCreateScreen(false));
+  }
+
+  // Back button
+  const backBtn = document.getElementById('createBackBtn');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => showScreen('lobbyScreen'));
+  }
+})();
+
+// ===== GAME EXIT BUTTON =====
+(function() {
+  const exitBtn = document.getElementById('gameExitBtn');
+  if (exitBtn) {
+    exitBtn.addEventListener('click', () => {
+      if (confirm('确定退出当前游戏？')) {
+        Net.send('room:leave');
+      }
+    });
+  }
+})();
+
+// Refresh room list button
+$('refreshRoomList').addEventListener('click', () => {
+  if (Net.connected) { Net.send('room:list'); toast('刷新中...'); }
 });
 
 // ===== LEADERBOARD =====
@@ -2036,12 +3557,35 @@ const VoiceChat = (() => {
   return {
     async join() {
       if (inVoice) return;
+
+      // Check secure context (HTTPS required for getUserMedia on most browsers)
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast('语音需要 HTTPS 连接，当前浏览器不支持麦克风');
+        console.warn('[VoiceChat] getUserMedia not available. Is the page served over HTTPS?');
+        return;
+      }
+
+      if (!window.isSecureContext) {
+        toast('语音聊天需要 HTTPS，请通过 HTTPS 访问页面');
+        console.warn('[VoiceChat] Not a secure context. Microphone requires HTTPS.');
+        return;
+      }
+
       try {
         localStream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
         });
       } catch (err) {
-        toast('无法获取麦克风权限: ' + (err.message || err.name));
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          toast('麦克风权限被拒绝，请在浏览器设置中允许麦克风访问');
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          toast('未检测到麦克风设备');
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          toast('麦克风被其他应用占用，请关闭后重试');
+        } else {
+          toast('无法获取麦克风: ' + (err.message || err.name));
+        }
+        console.warn('[VoiceChat] getUserMedia error:', err);
         return;
       }
 
