@@ -1,0 +1,1816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>德州扑克 Online</title>
+<style>
+@import url('https://fonts.loli.net/css2?family=Noto+Sans+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
+:root {
+  --felt: #1a6b3c; --felt-dark: #0f4d2a;
+  --wood: #3a2210; --wood-light: #5a3a1a;
+  --gold: #d4a840; --gold-dim: #8a7030;
+  --red: #cc3333; --white: #f0ece4; --dim: #7a7a6a;
+  --card-back: #1a3a6a; --card-back2: #2a4a8a;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--white); overflow:hidden; height:100vh; width:100vw; user-select:none; -webkit-user-select:none; }
+
+/* ===== SCREENS ===== */
+.screen { position:fixed; inset:0; display:none; flex-direction:column; justify-content:center; align-items:center; z-index:100; background:#0a0a0a; }
+.screen.active { display:flex; }
+
+/* ===== LOBBY ===== */
+.lobby-title { font-size:48px; font-weight:900; color:var(--gold); margin-bottom:4px; text-shadow:0 0 40px rgba(212,168,64,0.2); }
+.lobby-sub { font-family:'JetBrains Mono',monospace; font-size:13px; color:#4a4a4a; letter-spacing:4px; margin-bottom:48px; }
+
+.lobby-box { background:#111; border:1px solid #222; border-radius:12px; padding:32px; width:min(420px,90vw); }
+.lobby-box h3 { font-size:15px; color:var(--gold); margin-bottom:16px; letter-spacing:2px; }
+
+.input-group { margin-bottom:16px; }
+.input-group label { display:block; font-size:12px; color:var(--dim); margin-bottom:6px; }
+.input-group input {
+  width:100%; padding:10px 14px; background:#0a0a0a; border:1.5px solid #2a2a2a;
+  border-radius:6px; color:var(--white); font-family:'JetBrains Mono',monospace; font-size:14px;
+  outline:none; transition:border-color 0.3s;
+}
+.input-group input:focus { border-color:var(--gold); }
+.input-group input::placeholder { color:#3a3a3a; }
+
+.btn-row { display:flex; gap:10px; margin-top:20px; }
+
+.btn {
+  flex:1; padding:12px; border:2px solid; border-radius:8px; cursor:pointer;
+  font-family:'Noto Sans SC',sans-serif; font-size:14px; font-weight:700;
+  background:transparent; transition:all 0.2s; letter-spacing:1px;
+}
+.btn:hover { transform:translateY(-2px); }
+.btn-gold { border-color:var(--gold); color:var(--gold); }
+.btn-gold:hover { background:var(--gold); color:#0a0a0a; }
+.btn-dim { border-color:#444; color:#888; }
+.btn-dim:hover { background:rgba(255,255,255,0.05); }
+.btn-red { border-color:var(--red); color:#f06060; }
+.btn-red:hover { background:rgba(204,51,51,0.15); }
+.btn-green { border-color:#40a060; color:#60d080; }
+.btn-green:hover { background:rgba(64,160,96,0.15); }
+
+.divider { height:1px; background:#222; margin:24px 0; }
+
+.room-list { max-height:200px; overflow-y:auto; }
+.room-item {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px; background:#0a0a0a; border:1px solid #1a1a1a; border-radius:6px;
+  margin-bottom:8px; cursor:pointer; transition:border-color 0.3s;
+}
+.room-item:hover { border-color:var(--gold-dim); }
+.room-item-code { font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:700; color:var(--gold); }
+.room-item-info { font-size:12px; color:var(--dim); text-align:right; }
+
+.error-msg { color:var(--red); font-size:12px; margin-top:8px; min-height:18px; }
+
+/* Bot options */
+.bot-options {
+  margin-top:10px; display:flex; align-items:center; gap:10px;
+}
+.bot-options label { font-size:12px; color:var(--dim); }
+.bot-options select {
+  padding:6px 12px; background:#0a0a0a; border:1.5px solid #2a2a2a;
+  border-radius:6px; color:var(--white); font-family:'JetBrains Mono',monospace;
+  font-size:13px; outline:none; cursor:pointer;
+}
+.bot-options select:focus { border-color:var(--gold); }
+
+/* Bot badge in player list */
+.bot-badge {
+  display:inline-block; font-size:9px; background:rgba(64,160,96,0.15);
+  color:#60d080; padding:2px 6px; border-radius:8px; margin-left:4px;
+  letter-spacing:0.5px; vertical-align:middle;
+}
+
+/* ===== ROOM (waiting) ===== */
+.room-code-big { font-family:'JetBrains Mono',monospace; font-size:56px; font-weight:700; color:var(--gold); letter-spacing:8px; text-shadow:0 0 40px rgba(212,168,64,0.3); margin-bottom:8px; }
+.room-label { font-size:12px; color:var(--dim); letter-spacing:2px; margin-bottom:32px; }
+
+.room-players { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-bottom:32px; max-width:500px; }
+.room-player-card {
+  background:#111; border:1.5px solid #2a2a2a; border-radius:10px;
+  padding:16px 24px; text-align:center; min-width:100px; transition:all 0.3s;
+}
+.room-player-card.host { border-color:var(--gold-dim); }
+.room-player-card.ready { border-color:#40a060; }
+.room-player-card .rp-name { font-size:14px; font-weight:700; }
+.room-player-card .rp-stack { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--gold); margin-top:4px; }
+.room-player-card .rp-badge { font-size:10px; color:var(--dim); margin-top:6px; }
+.room-player-card .rp-badge.host-badge { color:var(--gold); }
+.room-player-card .rp-badge.ready-badge { color:#60d080; }
+
+.room-actions { display:flex; gap:12px; }
+
+/* Share buttons */
+.room-share-row { display:flex; gap:10px; justify-content:center; margin-bottom:20px; }
+.share-btn { font-size:12px !important; padding:8px 16px !important; letter-spacing:0.5px !important; }
+.share-btn.copied { border-color:#40a060 !important; color:#60d080 !important; }
+
+/* ===== TABLE ===== */
+#table-container { position:relative; width:100vw; height:100vh; background:radial-gradient(ellipse at center,#0f0f0f 0%,#050505 100%); display:none; justify-content:center; align-items:center; }
+#table-container.active { display:flex; }
+
+.table { position:relative; width:min(90vw,900px); height:min(55vh,450px); background:radial-gradient(ellipse at center,var(--felt) 0%,var(--felt-dark) 100%); border-radius:50%; border:12px solid var(--wood); box-shadow:0 0 0 3px var(--wood-light),0 0 60px rgba(0,0,0,0.8),inset 0 0 80px rgba(0,0,0,0.3); }
+.table::before { content:''; position:absolute; inset:8px; border-radius:50%; border:1.5px solid rgba(255,255,255,0.06); }
+
+.pot-display { position:absolute; top:38%; left:50%; transform:translate(-50%,-50%); text-align:center; z-index:10; }
+.pot-label { font-size:11px; color:rgba(255,255,255,0.4); letter-spacing:2px; text-transform:uppercase; }
+.pot-amount { font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:700; color:var(--gold); text-shadow:0 2px 10px rgba(212,168,64,0.4); }
+
+.community { position:absolute; top:52%; left:50%; transform:translate(-50%,-50%); display:flex; gap:8px; z-index:10; }
+
+.card { width:52px; height:74px; border-radius:6px; position:relative; font-family:'JetBrains Mono',monospace; transition:transform 0.3s,box-shadow 0.3s; }
+.card-front { background:linear-gradient(135deg,#faf8f0 0%,#e8e4d8 100%); border:1px solid #c0b8a0; box-shadow:0 2px 8px rgba(0,0,0,0.3); display:flex; flex-direction:column; justify-content:space-between; padding:5px 7px; }
+.card-front .rank { font-size:16px; font-weight:700; line-height:1; }
+.card-front .suit { font-size:18px; line-height:1; }
+.card-front .rank-br { font-size:13px; font-weight:700; align-self:flex-end; transform:rotate(180deg); line-height:1; opacity:0.6; }
+.card-red { color:var(--red); }
+.card-black { color:#1a1a1a; }
+.card-back { background:linear-gradient(135deg,var(--card-back) 0%,var(--card-back2) 100%); border:2px solid #3a5a9a; box-shadow:0 2px 8px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; }
+.card-back::after { content:'♠'; font-size:22px; color:rgba(255,255,255,0.15); }
+.card-placeholder { background:rgba(255,255,255,0.04); border:1.5px dashed rgba(255,255,255,0.1); }
+/* ===== DEAL FROM CENTER ===== */
+.card-deal-from-center {
+  animation: dealFromCenter 0.45s cubic-bezier(0.23,1,0.32,1) forwards;
+}
+@keyframes dealFromCenter {
+  0% { transform:translate(0,0) scale(0.2) rotate(180deg); opacity:0; }
+  40% { opacity:1; }
+  100% { transform:translate(0,0) scale(1) rotate(0deg); opacity:1; }
+}
+
+/* ===== COMMUNITY FLIP ===== */
+.card-flip-in {
+  animation: flipIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  perspective: 600px;
+}
+@keyframes flipIn {
+  0% { transform:rotateY(180deg) scale(0.8); opacity:0; }
+  50% { transform:rotateY(90deg) scale(0.9); opacity:0.5; }
+  100% { transform:rotateY(0deg) scale(1); opacity:1; }
+}
+
+/* ===== SEAT CARD DEAL ===== */
+.seat-card-deal {
+  animation: seatDeal 0.4s cubic-bezier(0.23,1,0.32,1) forwards;
+}
+@keyframes seatDeal {
+  0% { transform:translateY(-120px) scale(0.3) rotate(-20deg); opacity:0; }
+  100% { transform:translateY(0) scale(1) rotate(0deg); opacity:1; }
+}
+
+/* ===== CHIP SLIDE TO POT ===== */
+.chip-fly {
+  animation: chipFly 0.5s cubic-bezier(0.23,1,0.32,1) forwards;
+}
+@keyframes chipFly {
+  0% { transform:scale(0) translateY(30px); opacity:0; }
+  50% { opacity:1; }
+  100% { transform:scale(1) translateY(0); opacity:1; }
+}
+
+/* ===== WINNER CELEBRATION ===== */
+.seat.winner .seat-info {
+  animation: winnerPulse 1s ease-in-out infinite alternate;
+}
+@keyframes winnerPulse {
+  0% { box-shadow:0 0 12px rgba(64,224,128,0.3); border-color:#40e080; }
+  100% { box-shadow:0 0 36px rgba(64,224,128,0.7), 0 0 60px rgba(64,224,128,0.2); border-color:#80ffb0; }
+}
+
+/* ===== WIN PARTICLES ===== */
+.win-particle {
+  position:absolute; pointer-events:none; z-index:100;
+  width:6px; height:6px; border-radius:50%;
+  animation: particleFloat 1.2s ease-out forwards;
+}
+@keyframes particleFloat {
+  0% { transform:translate(0,0) scale(1); opacity:1; }
+  100% { transform:translate(var(--px),var(--py)) scale(0); opacity:0; }
+}
+
+/* ===== POT BUMP ===== */
+.pot-bump {
+  animation: potBump 0.3s ease-out;
+}
+@keyframes potBump {
+  0% { transform:translate(-50%,-50%) scale(1); }
+  40% { transform:translate(-50%,-50%) scale(1.2); }
+  100% { transform:translate(-50%,-50%) scale(1); }
+}
+
+/* ===== ACTION SLIDE UP ===== */
+.seat-action-anim {
+  animation: actionSlideUp 0.3s ease-out;
+}
+@keyframes actionSlideUp {
+  0% { transform:translateY(8px); opacity:0; }
+  100% { transform:translateY(0); opacity:1; }
+}
+
+/* ===== FOLD FADE ===== */
+.seat.fold-anim {
+  animation: foldFade 0.4s ease-out forwards;
+}
+@keyframes foldFade {
+  0% { opacity:1; transform:translateY(0); }
+  100% { opacity:0.35; transform:translateY(6px); }
+}
+
+/* ===== SOUND TOGGLE ===== */
+.sound-toggle {
+  position:fixed; top:12px; right:16px; z-index:60;
+  background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1);
+  border-radius:20px; padding:6px 14px; cursor:pointer;
+  font-size:16px; line-height:1; transition:all 0.3s;
+  backdrop-filter:blur(8px);
+}
+.sound-toggle:hover { border-color:var(--gold-dim); }
+
+/* ===== SPECTATOR BADGE ===== */
+.spectator-badge {
+  position:fixed; top:12px; left:16px; z-index:60;
+  background:rgba(212,168,64,0.15); border:1px solid rgba(212,168,64,0.3);
+  border-radius:20px; padding:6px 14px; font-size:12px; color:var(--gold);
+  letter-spacing:1px; display:none; backdrop-filter:blur(8px);
+}
+.spectator-badge.visible { display:flex; align-items:center; gap:6px; }
+.spectator-badge .eye { font-size:14px; }
+
+/* ===== VOICE CHAT ===== */
+.voice-toggle {
+  position:fixed; top:12px; right:110px; z-index:60;
+  background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1);
+  border-radius:20px; padding:6px 14px; cursor:pointer;
+  font-size:16px; line-height:1; transition:all 0.3s;
+  backdrop-filter:blur(8px); display:none;
+}
+.voice-toggle.visible { display:block; }
+.voice-toggle:hover { border-color:var(--gold-dim); }
+.voice-toggle.active { border-color:#40a060; background:rgba(64,160,96,0.15); }
+.voice-toggle.muted { border-color:var(--red); background:rgba(204,51,51,0.1); }
+.voice-indicator {
+  display:inline-block; width:8px; height:8px; border-radius:50%;
+  background:#40a060; margin-left:4px; vertical-align:middle;
+  box-shadow:0 0 6px rgba(64,160,96,0.5);
+  animation:voicePulse 1.5s ease-in-out infinite;
+}
+@keyframes voicePulse {
+  0%,100%{opacity:0.4;transform:scale(0.8)}
+  50%{opacity:1;transform:scale(1.2)}
+}
+
+/* ===== LEADERBOARD PANEL ===== */
+.leaderboard-overlay {
+  position:fixed; inset:0; background:rgba(5,5,15,0.92);
+  display:none; justify-content:center; align-items:center;
+  z-index:150; backdrop-filter:blur(6px);
+}
+.leaderboard-overlay.active { display:flex; }
+
+.leaderboard-box {
+  background:#111; border:1px solid #222; border-radius:12px;
+  padding:32px; width:min(560px,92vw); max-height:80vh; overflow-y:auto;
+}
+
+.leaderboard-header {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:24px;
+}
+
+.leaderboard-title {
+  font-family:'Noto Sans SC',sans-serif; font-size:22px; font-weight:900;
+  color:var(--gold); letter-spacing:2px;
+}
+
+.leaderboard-close {
+  background:none; border:none; color:#666; font-size:20px;
+  cursor:pointer; padding:4px 8px; transition:color 0.2s;
+}
+.leaderboard-close:hover { color:var(--white); }
+
+.leaderboard-tabs {
+  display:flex; gap:8px; margin-bottom:20px;
+}
+
+.lb-tab {
+  font-family:'JetBrains Mono',monospace; font-size:11px;
+  padding:5px 14px; border-radius:16px; cursor:pointer;
+  border:1px solid #2a2a2a; color:var(--dim); background:transparent;
+  transition:all 0.2s; letter-spacing:0.5px;
+}
+.lb-tab:hover { border-color:#444; }
+.lb-tab.active { border-color:var(--gold); color:var(--gold); background:rgba(212,168,64,0.08); }
+
+.leaderboard-table {
+  width:100%; border-collapse:collapse;
+}
+
+.leaderboard-table th {
+  font-family:'JetBrains Mono',monospace; font-size:10px;
+  color:var(--dim); text-transform:uppercase; letter-spacing:1px;
+  padding:8px 10px; text-align:left; border-bottom:1px solid #222;
+}
+
+.leaderboard-table td {
+  font-size:13px; padding:10px; border-bottom:1px solid #1a1a1a;
+}
+
+.leaderboard-table tr:hover td { background:rgba(255,255,255,0.02); }
+
+.lb-rank {
+  font-family:'JetBrains Mono',monospace; font-weight:700; width:36px;
+}
+.lb-rank.gold { color:#f0d860; }
+.lb-rank.silver { color:#b0b0b0; }
+.lb-rank.bronze { color:#cd7f32; }
+
+.lb-name { font-weight:700; }
+.lb-num { font-family:'JetBrains Mono',monospace; color:var(--dim); text-align:right; }
+.lb-highlight { color:var(--gold); font-family:'JetBrains Mono',monospace; font-weight:700; }
+
+.lb-empty { text-align:center; color:#3a3a3a; padding:40px 0; font-size:13px; }
+
+/* Spectator count in room list */
+.room-spec-count { font-size:10px; color:var(--gold-dim); }
+
+/* Public room cards */
+.room-card {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:14px 18px; background:#0e0e0e; border:1.5px solid #1a1a1a;
+  border-radius:10px; margin-bottom:10px; cursor:pointer;
+  transition:all 0.2s; position:relative; overflow:hidden;
+}
+.room-card:hover { border-color:var(--gold-dim); transform:translateX(4px); }
+.room-card::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background:var(--gold); opacity:0; transition:opacity 0.2s;
+}
+.room-card:hover::before { opacity:1; }
+.room-card-left { display:flex; flex-direction:column; gap:3px; }
+.room-card-code { font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; color:var(--gold); letter-spacing:3px; }
+.room-card-host { font-size:11px; color:var(--dim); }
+.room-card-right { display:flex; flex-direction:column; align-items:flex-end; gap:3px; }
+.room-card-players { font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--white); }
+.room-card-status { font-size:10px; padding:2px 8px; border-radius:8px; letter-spacing:0.5px; }
+.room-card-status.waiting { background:rgba(64,160,96,0.12); color:#60d080; }
+.room-card-status.playing { background:rgba(212,168,64,0.12); color:var(--gold); }
+.room-card-status.bot { background:rgba(96,176,240,0.12); color:#60b0f0; }
+.room-list-empty { text-align:center; color:#3a3a3a; font-size:12px; padding:32px 0; }
+
+.card-dealing { animation:dealCard 0.35s ease-out forwards; }
+@keyframes dealCard { from{transform:scale(0.3) translateY(-60px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
+
+.seat { position:absolute; display:flex; flex-direction:column; align-items:center; gap:4px; z-index:20; transition:opacity 0.3s; }
+.seat.folded { opacity:0.35; }
+.seat.disconnected { opacity:0.2; }
+.seat-info { background:rgba(0,0,0,0.7); border:1.5px solid rgba(255,255,255,0.1); border-radius:10px; padding:6px 14px; text-align:center; min-width:90px; backdrop-filter:blur(8px); transition:border-color 0.3s,box-shadow 0.3s; }
+.seat.active .seat-info { border-color:var(--gold); box-shadow:0 0 20px rgba(212,168,64,0.3); }
+.seat.winner .seat-info { border-color:#40e080; box-shadow:0 0 24px rgba(64,224,128,0.4); }
+.seat-name { font-size:12px; font-weight:700; }
+.seat-stack { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--gold); }
+.seat-action { font-size:10px; color:var(--dim); min-height:14px; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
+.seat-action.act-fold { color:#888; } .seat-action.act-call { color:#60c0f0; }
+.seat-action.act-raise { color:var(--gold); } .seat-action.act-allin { color:var(--red); }
+.seat-action.act-check { color:#80d080; } .seat-action.act-winner { color:#40e080; }
+
+.seat-cards { display:flex; gap:3px; }
+.seat-cards .card { width:34px; height:48px; }
+.seat-cards .card .rank { font-size:11px; } .seat-cards .card .suit { font-size:12px; } .seat-cards .card .rank-br { font-size:9px; }
+
+.seat-bet { position:absolute; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--gold); background:rgba(0,0,0,0.5); padding:2px 8px; border-radius:10px; white-space:nowrap; }
+
+.dealer-btn { position:absolute; width:20px; height:20px; border-radius:50%; background:linear-gradient(135deg,#f0f0f0,#c0c0c0); color:#333; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:900; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.4); z-index:25; }
+
+/* Seat positions — horseshoe layout (Dou Dizhu style) */
+/* seat-0: Me — bottom center */
+.seat-0 { bottom:-10px; left:50%; transform:translateX(-50%); }
+.seat-0 .seat-bet { top:-24px; }
+/* seat-1: Left */
+.seat-1 { left:2%; top:35%; transform:translateY(-50%); }
+.seat-1 .seat-bet { right:-50px; top:50%; }
+/* seat-2: Top-left */
+.seat-2 { left:18%; top:-15px; }
+.seat-2 .seat-bet { bottom:-24px; }
+/* seat-3: Top-right */
+.seat-3 { right:18%; top:-15px; }
+.seat-3 .seat-bet { bottom:-24px; }
+/* seat-4: Right */
+.seat-4 { right:2%; top:35%; transform:translateY(-50%); }
+.seat-4 .seat-bet { left:-50px; top:50%; }
+/* seat-5: Top-center */
+.seat-5 { left:50%; top:-15px; transform:translateX(-50%); }
+.seat-5 .seat-bet { bottom:-24px; }
+
+/* My hand — fixed at bottom, outside table */
+.my-hand { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); display:flex; gap:6px; z-index:35; }
+.my-hand .card { width:56px; height:80px; }
+.my-hand .card:hover { transform:translateY(-6px); box-shadow:0 8px 20px rgba(0,0,0,0.4); }
+.my-hand .card .rank { font-size:18px; } .my-hand .card .suit { font-size:20px; } .my-hand .card .rank-br { font-size:14px; }
+
+.hand-rank-label { position:absolute; bottom:140px; left:50%; transform:translateX(-50%); font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--gold); background:rgba(0,0,0,0.6); padding:4px 16px; border-radius:12px; border:1px solid rgba(212,168,64,0.3); z-index:30; white-space:nowrap; opacity:0; transition:opacity 0.3s; }
+.hand-rank-label.visible { opacity:1; }
+
+.action-panel { position:fixed; bottom:0; left:0; right:0; background:linear-gradient(to top,rgba(10,10,10,0.98),rgba(10,10,10,0.9)); border-top:1px solid rgba(255,255,255,0.08); padding:16px 20px; display:flex; align-items:center; justify-content:center; gap:12px; z-index:50; backdrop-filter:blur(10px); opacity:0; pointer-events:none; transition:opacity 0.3s; flex-wrap:wrap; }
+.action-panel.active { opacity:1; pointer-events:all; }
+.action-btn { font-family:'Noto Sans SC',sans-serif; font-size:14px; font-weight:700; padding:12px 28px; border:2px solid; border-radius:8px; cursor:pointer; transition:all 0.2s; letter-spacing:1px; background:transparent; min-width:80px; }
+.action-btn:hover { transform:translateY(-2px); }
+.btn-fold { border-color:#666; color:#888; } .btn-fold:hover { background:rgba(100,100,100,0.15); }
+.btn-check { border-color:#40a060; color:#60d080; } .btn-check:hover { background:rgba(64,160,96,0.15); }
+.btn-call { border-color:#4090d0; color:#60b0f0; } .btn-call:hover { background:rgba(64,144,208,0.15); }
+.btn-raise { border-color:var(--gold); color:var(--gold); } .btn-raise:hover { background:rgba(212,168,64,0.15); }
+.btn-allin { border-color:var(--red); color:#f06060; } .btn-allin:hover { background:rgba(204,51,51,0.15); }
+.raise-slider { display:flex; align-items:center; gap:10px; }
+.raise-slider input[type="range"] { width:120px; accent-color:var(--gold); cursor:pointer; }
+.raise-amount { font-family:'JetBrains Mono',monospace; font-size:14px; color:var(--gold); min-width:50px; text-align:center; }
+
+.status-bar { position:fixed; top:12px; left:50%; transform:translateX(-50%); font-size:13px; color:var(--dim); background:rgba(0,0,0,0.6); padding:6px 20px; border-radius:20px; z-index:50; letter-spacing:1px; backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.05); }
+
+.connection-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+.connection-dot.online { background:#40e080; box-shadow:0 0 6px rgba(64,224,128,0.5); }
+.connection-dot.offline { background:var(--red); box-shadow:0 0 6px rgba(204,51,51,0.5); }
+
+/* Toast */
+.toast { position:fixed; top:60px; left:50%; transform:translateX(-50%); background:rgba(20,20,20,0.95); border:1px solid #333; padding:10px 24px; border-radius:8px; font-size:13px; z-index:200; opacity:0; transition:opacity 0.3s; pointer-events:none; }
+.toast.show { opacity:1; }
+
+@media (max-width:700px) {
+  .table { width:92vw; height:36vh; border-width:6px; }
+  .table::before { inset:4px; }
+  /* Cards — much smaller on mobile */
+  .card { width:30px; height:42px; border-radius:4px; }
+  .card .rank { font-size:9px; } .card .suit { font-size:10px; }
+  .card-front { padding:3px 4px; }
+  .card-front .rank-br { font-size:8px; }
+  .card-back::after { font-size:12px; }
+  /* Other players' cards — compact */
+  .seat-cards .card { width:26px; height:36px; }
+  .seat-cards .card .rank { font-size:8px; } .seat-cards .card .suit { font-size:9px; }
+  .seat-cards .card .rank-br { display:none; }
+  /* My hand — smaller, positioned outside table */
+  .my-hand { bottom:4px; gap:4px; }
+  .my-hand .card { width:42px; height:58px; }
+  .my-hand .card .rank { font-size:14px; } .my-hand .card .suit { font-size:16px; }
+  .my-hand .card .rank-br { font-size:10px; }
+  .my-hand .card:hover { transform:translateY(-4px); }
+  /* Seat info — compact */
+  .seat-info { padding:3px 8px; min-width:60px; border-radius:6px; }
+  .seat-name { font-size:10px; }
+  .seat-stack { font-size:9px; }
+  .seat-action { font-size:8px; min-height:10px; }
+  .seat { gap:2px; }
+  /* Community cards */
+  .community { gap:3px; }
+  .pot-amount { font-size:16px; }
+  .pot-label { font-size:9px; }
+  /* Action panel — compact */
+  .action-panel { padding:8px 10px; gap:6px; }
+  .action-btn { padding:8px 12px; font-size:11px; min-width:50px; }
+  .raise-slider input[type="range"] { width:80px; }
+  .raise-amount { font-size:11px; min-width:40px; }
+  /* Status bar */
+  .status-bar { font-size:11px; padding:4px 12px; }
+  /* Hand rank label */
+  .hand-rank-label { bottom:100px; font-size:11px; padding:3px 10px; }
+  /* Dealer button */
+  .dealer-btn { width:16px; height:16px; font-size:8px; }
+  /* Room */
+  .room-code-big { font-size:32px; }
+  /* Bet */
+  .seat-bet { font-size:10px; padding:1px 6px; }
+  /* Voice/Sound toggles */
+  .voice-toggle, .sound-toggle { padding:4px 10px; font-size:13px; }
+  .voice-toggle { right:80px; }
+  /* Seat repositions for mobile */
+  .seat-0 { bottom:0; }
+  .seat-1 { left:0; top:38%; }
+  .seat-1 .seat-bet { right:-36px; }
+  .seat-2 { left:10%; top:-8px; }
+  .seat-3 { right:10%; top:-8px; }
+  .seat-4 { right:0; top:38%; }
+  .seat-4 .seat-bet { left:-36px; }
+  .seat-5 { top:-8px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LOBBY SCREEN ===== -->
+<div class="screen active" id="lobbyScreen">
+  <div class="lobby-title">德州扑克</div>
+  <div class="lobby-sub">TEXAS HOLD'EM ONLINE</div>
+  <button class="btn btn-dim" id="leaderboardBtn" style="padding:8px 24px;margin-bottom:24px;font-size:12px;letter-spacing:2px">🏆 排行榜</button>
+
+  <div class="lobby-box">
+    <div class="input-group">
+      <label>你的昵称</label>
+      <input type="text" id="nameInput" placeholder="输入昵称" maxlength="12" value="">
+    </div>
+
+    <h3>创建房间</h3>
+    <div class="btn-row">
+      <button class="btn btn-gold" id="createRoomBtn">创建房间</button>
+      <button class="btn btn-green" id="botGameBtn">🤖 人机对战</button>
+    </div>
+    <div class="bot-options" id="botOptions" style="display:none">
+      <label>难度：</label>
+      <select id="botDifficulty">
+        <option value="easy">🟢 新手</option>
+        <option value="medium" selected>🟡 进阶</option>
+        <option value="hard">🔴 高手</option>
+      </select>
+    </div>
+
+    <div class="divider"></div>
+
+    <h3>加入房间</h3>
+    <div class="input-group">
+      <label>房间号</label>
+      <input type="text" id="codeInput" placeholder="输入6位房间号" maxlength="6" style="text-transform:uppercase;letter-spacing:4px;font-size:18px">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-dim" id="joinRoomBtn">加入</button>
+      <button class="btn btn-dim" id="spectateBtn" style="color:var(--gold);border-color:var(--gold-dim)">👁 观战</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <h3>🌐 公开房间大厅</h3>
+    <div class="room-list" id="publicRoomList">
+      <div style="color:#3a3a3a;font-size:12px;text-align:center;padding:16px">点击房间卡片直接加入，无需手动输入房间号</div>
+    </div>
+
+    <div class="error-msg" id="lobbyError"></div>
+  </div>
+</div>
+
+<!-- ===== ROOM SCREEN ===== -->
+<div class="screen" id="roomScreen">
+  <div class="room-code-big" id="roomCodeDisplay">------</div>
+  <div class="room-label">分享房间号给朋友加入</div>
+  <div class="room-share-row">
+    <button class="btn btn-dim share-btn" id="copyCodeBtn">📋 复制房间号</button>
+    <button class="btn btn-dim share-btn" id="shareBtn">📤 分享给朋友</button>
+  </div>
+  <div class="room-players" id="roomPlayers"></div>
+  <div class="room-actions">
+    <button class="btn btn-dim" id="leaveRoomBtn">离开房间</button>
+    <button class="btn btn-green" id="readyBtn">准备</button>
+    <button class="btn btn-gold" id="startGameBtn" style="display:none">开始游戏</button>
+  </div>
+</div>
+
+<!-- ===== GAME SCREEN ===== -->
+<div id="table-container">
+  <div class="status-bar" id="statusBar"><span class="connection-dot online" id="connDot"></span>等待中...</div>
+  <div class="table" id="table">
+    <div class="pot-display"><div class="pot-label">POT</div><div class="pot-amount" id="potAmount">0</div></div>
+    <div class="community" id="community"></div>
+  </div>
+  <div class="hand-rank-label" id="handRankLabel"></div>
+  <div class="action-panel" id="actionPanel">
+    <button class="action-btn btn-fold" id="btnFold">弃牌</button>
+    <button class="action-btn btn-check" id="btnCheck">过牌</button>
+    <button class="action-btn btn-call" id="btnCall">跟注 <span id="callAmount"></span></button>
+    <div class="raise-slider" id="raiseSliderGroup">
+      <input type="range" id="raiseRange" min="0" max="1000" value="40">
+      <span class="raise-amount" id="raiseValue">40</span>
+    </div>
+    <button class="action-btn btn-raise" id="btnRaise">加注</button>
+    <button class="action-btn btn-allin" id="btnAllin">ALL IN</button>
+  </div>
+</div>
+
+<div class="spectator-badge" id="spectatorBadge"><span class="eye">👁</span> 观战中</div>
+<div class="voice-toggle" id="voiceToggle" title="语音聊天">🎤</div>
+<div class="sound-toggle" id="soundToggle" title="音效开关">🔊</div>
+<div class="toast" id="toast"></div>
+
+<!-- ===== LEADERBOARD OVERLAY ===== -->
+<div class="leaderboard-overlay" id="leaderboardOverlay">
+  <div class="leaderboard-box">
+    <div class="leaderboard-header">
+      <div class="leaderboard-title">🏆 排行榜</div>
+      <button class="leaderboard-close" id="lbClose">✕</button>
+    </div>
+    <div class="leaderboard-tabs" id="lbTabs">
+      <button class="lb-tab active" data-sort="totalWon">总盈利</button>
+      <button class="lb-tab" data-sort="handsWon">胜场</button>
+      <button class="lb-tab" data-sort="winRate">胜率</button>
+      <button class="lb-tab" data-sort="biggestPot">最大底池</button>
+      <button class="lb-tab" data-sort="allIns">All-in 次数</button>
+    </div>
+    <table class="leaderboard-table">
+      <thead>
+        <tr>
+          <th>#</th><th>玩家</th><th>场次</th><th>胜场</th><th>胜率</th><th>总盈利</th><th>最佳牌型</th>
+        </tr>
+      </thead>
+      <tbody id="lbBody"></tbody>
+    </table>
+    <div class="lb-empty" id="lbEmpty" style="display:none">暂无数据，打几手牌再来看看吧</div>
+  </div>
+</div>
+
+<script>
+// ===== NETWORK LAYER =====
+const Net = {
+  ws: null,
+  playerId: null,
+  playerName: '',
+  handlers: {},
+  connected: false,
+
+  connect(url) {
+    return new Promise((resolve, reject) => {
+      this.ws = new WebSocket(url);
+      this.ws.onopen = () => { this.connected = true; resolve(); };
+      this.ws.onclose = () => { this.connected = false; this.emit('disconnect'); };
+      this.ws.onerror = (e) => reject(e);
+      this.ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          this.emit(msg.type, msg.data);
+        } catch {}
+      };
+    });
+  },
+
+  send(type, data = {}) {
+    if (this.ws && this.ws.readyState === 1) {
+      this.ws.send(JSON.stringify({ type, data }));
+    }
+  },
+
+  on(type, handler) {
+    if (!this.handlers[type]) this.handlers[type] = [];
+    this.handlers[type].push(handler);
+  },
+
+  emit(type, data) {
+    (this.handlers[type] || []).forEach(h => h(data));
+  },
+
+  auth(name) {
+    return new Promise(resolve => {
+      this.on('auth:ok', (d) => { this.playerId = d.playerId; this.playerName = d.name || name; resolve(d); });
+      this.send('auth', { name });
+    });
+  },
+};
+
+// ===== UI HELPERS =====
+function $(id) { return document.getElementById(id); }
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $('table-container').classList.remove('active');
+  if (id === 'table') { $('table-container').classList.add('active'); }
+  else { $(id).classList.add('active'); }
+}
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function showError(msg) { $('lobbyError').textContent = msg; }
+
+// ===== SOUND SYSTEM (Web Audio API — no external files) =====
+const SFX = (() => {
+  let ctx = null;
+  let enabled = true;
+  let masterGain = null;
+
+  function ensureCtx() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = ctx.createGain();
+      masterGain.gain.value = 0.5;
+      masterGain.connect(ctx.destination);
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function noise(duration, freq, type = 'sine', volume = 0.3, detune = 0) {
+    if (!enabled) return;
+    const c = ensureCtx();
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    osc.detune.value = detune;
+    gain.gain.setValueAtTime(volume, c.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start(c.currentTime);
+    osc.stop(c.currentTime + duration);
+  }
+
+  function burst(duration, freqStart, freqEnd, type = 'sine', volume = 0.2) {
+    if (!enabled) return;
+    const c = ensureCtx();
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freqStart, c.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(freqEnd, c.currentTime + duration);
+    gain.gain.setValueAtTime(volume, c.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start(c.currentTime);
+    osc.stop(c.currentTime + duration);
+  }
+
+  function click(duration = 0.05) {
+    if (!enabled) return;
+    const c = ensureCtx();
+    const buf = c.createBuffer(1, c.sampleRate * duration, c.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (c.sampleRate * 0.01));
+    }
+    const src = c.createBufferSource();
+    const gain = c.createGain();
+    const filter = c.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 3000;
+    filter.Q.value = 2;
+    src.buffer = buf;
+    gain.gain.value = 0.4;
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+    src.start();
+  }
+
+  return {
+    deal()    { click(0.04); setTimeout(() => noise(0.08, 800, 'triangle', 0.12), 30); },
+    flip()    { noise(0.06, 1200, 'sine', 0.15); setTimeout(() => noise(0.04, 2000, 'sine', 0.08), 50); },
+    chip()    { noise(0.05, 4000, 'square', 0.06); noise(0.03, 6000, 'sine', 0.04, 50); },
+    check()   { noise(0.06, 600, 'sine', 0.12); },
+    fold()    { burst(0.15, 400, 200, 'sine', 0.1); },
+    call()    { noise(0.08, 800, 'triangle', 0.1); setTimeout(() => noise(0.06, 1000, 'triangle', 0.08), 60); },
+    raise()   { noise(0.06, 1000, 'square', 0.08); setTimeout(() => noise(0.06, 1400, 'square', 0.06), 60); setTimeout(() => noise(0.06, 1800, 'sine', 0.05), 120); },
+    allin()   { for (let i = 0; i < 5; i++) setTimeout(() => noise(0.08, 600 + i * 200, 'sawtooth', 0.06), i * 40); },
+    yourTurn(){ noise(0.1, 880, 'sine', 0.15); setTimeout(() => noise(0.1, 1100, 'sine', 0.12), 100); },
+    win()     {
+      const notes = [523, 659, 784, 1047];
+      notes.forEach((f, i) => setTimeout(() => noise(0.25, f, 'sine', 0.12), i * 120));
+    },
+    lose()    { burst(0.4, 400, 150, 'sawtooth', 0.08); },
+    btnClick(){ click(0.02); },
+    toggle()  { enabled = !enabled; return enabled; },
+    isEnabled() { return enabled; },
+  };
+})();
+
+// Sound toggle
+$('soundToggle').addEventListener('click', () => {
+  const on = SFX.toggle();
+  $('soundToggle').textContent = on ? '🔊' : '🔇';
+});
+
+// ===== WIN PARTICLES =====
+function spawnWinParticles(targetEl) {
+  if (!targetEl) return;
+  const rect = targetEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const colors = ['#40e080','#f0d860','#60b0f0','#ff8060','#c080ff'];
+  for (let i = 0; i < 16; i++) {
+    const p = document.createElement('div');
+    p.className = 'win-particle';
+    const angle = (i / 16) * Math.PI * 2 + Math.random() * 0.5;
+    const dist = 40 + Math.random() * 80;
+    p.style.cssText = `left:${cx}px;top:${cy}px;background:${colors[i%colors.length]};--px:${Math.cos(angle)*dist}px;--py:${Math.sin(angle)*dist}px;animation-delay:${Math.random()*0.2}s`;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 1500);
+  }
+}
+
+// ===== POT BUMP =====
+function bumpPot() {
+  const el = document.querySelector('.pot-display');
+  if (!el) return;
+  el.classList.remove('pot-bump');
+  void el.offsetWidth;
+  el.classList.add('pot-bump');
+}
+
+// ===== CARD RENDERING =====
+const SUITS = ['♠','♥','♦','♣'];
+const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const RANK_VALUES = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14};
+const HAND_NAMES = ['高牌','一对','两对','三条','顺子','同花','葫芦','四条','同花顺','皇家同花顺'];
+
+function createCardEl(card) {
+  if (!card) return createCardBackEl();
+  const el = document.createElement('div');
+  const isRed = card.suit === 1 || card.suit === 2;
+  el.className = `card card-front ${isRed ? 'card-red' : 'card-black'}`;
+  el.innerHTML = `<div class="rank">${card.rankStr}</div><div class="suit">${card.suitStr}</div><div class="rank-br">${card.rankStr}</div>`;
+  return el;
+}
+
+function createCardBackEl() {
+  const el = document.createElement('div');
+  el.className = 'card card-back';
+  return el;
+}
+
+// ===== CLIENT-SIDE HAND EVAL (for display) =====
+function evaluateHand(cards) {
+  const combos = getCombinations(cards, 5);
+  let best = null;
+  for (const combo of combos) { const r = evaluate5(combo); if (!best || compareEval(r, best) > 0) best = r; }
+  return best;
+}
+function getCombinations(arr, k) {
+  const result = [];
+  function bt(start, current) { if (current.length === k) { result.push([...current]); return; } for (let i = start; i < arr.length; i++) { current.push(arr[i]); bt(i+1, current); current.pop(); } }
+  bt(0, []); return result;
+}
+function evaluate5(cards) {
+  const ranks = cards.map(c => RANK_VALUES[c.rankStr]).sort((a,b) => b-a);
+  const suits = cards.map(c => c.suit);
+  const isFlush = suits.every(s => s === suits[0]);
+  const unique = [...new Set(ranks)].sort((a,b) => b-a);
+  let isStraight = false, straightHigh = 0;
+  if (unique.length >= 5) { for (let i = 0; i <= unique.length-5; i++) { if (unique[i]-unique[i+4]===4) { isStraight=true; straightHigh=unique[i]; break; } } if (!isStraight && unique.includes(14) && unique.includes(5) && unique.includes(4) && unique.includes(3) && unique.includes(2)) { isStraight=true; straightHigh=5; } }
+  const counts = {}; for (const r of ranks) counts[r]=(counts[r]||0)+1;
+  const groups = Object.entries(counts).map(([r,c])=>({rank:+r,count:c})).sort((a,b)=>b.count-a.count||b.rank-a.rank);
+  if (isFlush && isStraight) { if (straightHigh===14) return {rank:9,values:[14],name:'皇家同花顺'}; return {rank:8,values:[straightHigh],name:'同花顺'}; }
+  if (groups[0].count===4) return {rank:7,values:[groups[0].rank,groups[1].rank],name:'四条'};
+  if (groups[0].count===3 && groups[1] && groups[1].count===2) return {rank:6,values:[groups[0].rank,groups[1].rank],name:'葫芦'};
+  if (isFlush) return {rank:5,values:ranks,name:'同花'};
+  if (isStraight) return {rank:4,values:[straightHigh],name:'顺子'};
+  if (groups[0].count===3) return {rank:3,values:[groups[0].rank,...groups.slice(1).map(g=>g.rank)],name:'三条'};
+  if (groups[0].count===2 && groups[1] && groups[1].count===2) return {rank:2,values:[groups[0].rank,groups[1].rank,groups[2].rank],name:'两对'};
+  if (groups[0].count===2) return {rank:1,values:[groups[0].rank,...groups.slice(1).map(g=>g.rank)],name:'一对'};
+  return {rank:0,values:ranks,name:'高牌'};
+}
+function compareEval(a,b) { if(a.rank!==b.rank) return a.rank-b.rank; for(let i=0;i<Math.min(a.values.length,b.values.length);i++){if(a.values[i]!==b.values[i]) return a.values[i]-b.values[i];} return 0; }
+
+// ===== GAME RENDERER =====
+let gameState = null;
+let myPlayerId = null;
+let myHand = [];
+let roomCode = '';
+let isHost = false;
+let prevPhase = '';
+let prevCommunityLen = 0;
+let prevPot = 0;
+let prevActions = {}; // playerId -> lastAction
+let prevMyHandIds = null; // track my hand cards to avoid re-animating
+
+function renderGame(state) {
+  gameState = state;
+  const table = $('table');
+
+  // Detect phase transitions for sounds/animations
+  const phaseChanged = state.phase !== prevPhase;
+  const communityGrew = state.community.length > prevCommunityLen;
+  const potGrew = state.pot > prevPot;
+
+  // Detect action changes for sounds
+  for (const p of state.players) {
+    const prev = prevActions[p.id];
+    if (p.lastAction && p.lastAction !== prev && p.lastAction !== '') {
+      // Trigger sound based on action
+      if (p.lastAction === 'fold') SFX.fold();
+      else if (p.lastAction === 'check') SFX.check();
+      else if (p.lastAction === 'call') SFX.call();
+      else if (p.lastAction === 'raise') SFX.raise();
+      else if (p.lastAction === 'allin') SFX.allin();
+    }
+  }
+
+  // Pot bump on increase
+  if (potGrew && prevPot > 0) bumpPot();
+
+  // Phase change sounds
+  if (phaseChanged) {
+    if (state.phase === 'flop' || state.phase === 'turn' || state.phase === 'river') {
+      // Card flip sounds with stagger
+      const newCards = state.community.length - prevCommunityLen;
+      for (let i = 0; i < newCards; i++) {
+        setTimeout(() => SFX.flip(), i * 200 + 100);
+      }
+    }
+    if (state.phase === 'showdown') {
+      setTimeout(() => SFX.win(), 600);
+    }
+  }
+
+  // Update tracking
+  prevPhase = state.phase;
+  prevCommunityLen = state.community.length;
+  prevPot = state.pot;
+  for (const p of state.players) prevActions[p.id] = p.lastAction;
+
+  table.querySelectorAll('.seat,.dealer-btn').forEach(el => el.remove());
+
+  const me = state.players.find(p => p.id === Net.playerId);
+  // Detect if my hand cards actually changed (new deal vs re-render)
+  const currentHandIds = me?.hand?.filter(c => c).map(c => c.suit + '-' + c.rank).join(',') || '';
+  const myHandChanged = currentHandIds !== prevMyHandIds;
+  if (me && me.hand && me.hand[0]) { myHand = me.hand; prevMyHandIds = currentHandIds; }
+
+  // Track which players we've seen cards for (to avoid re-animating other players)
+  if (!window._prevOtherHands) window._prevOtherHands = {};
+
+  // Seats
+  state.players.forEach((p, i) => {
+    const seat = document.createElement('div');
+    seat.className = `seat seat-${i}`;
+    if (p.folded) seat.classList.add('folded');
+    if (!p.connected) seat.classList.add('disconnected');
+    if (state.currentIdx === i && state.phase !== 'showdown' && state.phase !== 'idle') seat.classList.add('active');
+    if (p.lastAction === 'winner') seat.classList.add('winner');
+
+    const cardsDiv = document.createElement('div');
+    if (p.id === Net.playerId) cardsDiv.className = 'my-hand';
+    else cardsDiv.className = 'seat-cards';
+
+    if (p.id === Net.playerId) {
+      for (const card of (p.hand || [])) {
+        if (card) {
+          const el = createCardEl(card);
+          if (myHandChanged) el.classList.add('seat-card-deal');
+          cardsDiv.appendChild(el);
+        }
+      }
+    } else if (p.hand && p.hand[0]) {
+      // Other player's visible cards — only flip-animate when first revealed
+      const otherIds = p.hand.filter(c => c).map(c => c.suit + '-' + c.rank).join(',');
+      const otherChanged = otherIds !== (window._prevOtherHands[p.id] || '');
+      for (const card of p.hand) {
+        const el = card ? createCardEl(card) : createCardBackEl();
+        if (otherChanged) el.classList.add('card-flip-in');
+        cardsDiv.appendChild(el);
+      }
+      window._prevOtherHands[p.id] = otherIds;
+    } else if (!p.folded && state.phase !== 'idle') {
+      // Card backs — only animate on first deal (phase changed from idle)
+      const otherBackKey = p.id + '-backs';
+      const backsChanged = !window._prevOtherHands[otherBackKey];
+      for (let j = 0; j < 2; j++) {
+        const el = createCardBackEl();
+        if (backsChanged) {
+          el.classList.add('seat-card-deal');
+          el.style.animationDelay = `${j * 0.15}s`;
+        }
+        cardsDiv.appendChild(el);
+      }
+      window._prevOtherHands[otherBackKey] = true;
+    }
+
+    const info = document.createElement('div');
+    info.className = 'seat-info';
+    const actionMap = {fold:'弃牌',check:'过牌',call:'跟注',raise:'加注',allin:'ALL IN',winner:'🏆 WIN'};
+    const actionClass = p.lastAction ? `act-${p.lastAction}` : '';
+    info.innerHTML = `
+      <div class="seat-name">${p.name}${p.isBot?' <span class="bot-badge">BOT</span>':''}${p.id===Net.playerId?' (你)':''}<span class="voice-indicator" id="voice-ind-${p.id}" style="display:none"></span></div>
+      <div class="seat-stack">${p.stack}</div>
+      <div class="seat-action ${actionClass} ${p.lastAction ? 'seat-action-anim' : ''}">${actionMap[p.lastAction]||''}</div>
+    `;
+
+    if (p.id === Net.playerId) { seat.appendChild(cardsDiv); seat.appendChild(info); }
+    else { seat.appendChild(info); seat.appendChild(cardsDiv); }
+
+    if (p.bet > 0) {
+      const bet = document.createElement('div');
+      bet.className = 'seat-bet chip-fly';
+      bet.textContent = p.bet;
+      seat.appendChild(bet);
+      SFX.chip();
+    }
+    table.appendChild(seat);
+  });
+
+  // Move my hand cards outside the table (fixed at bottom of screen, Dou Dizhu style)
+  const myHandEl = table.querySelector('.my-hand');
+  if (myHandEl) {
+    const container = $('table-container');
+    container.appendChild(myHandEl);
+  }
+
+  // Dealer button
+  const dBtn = document.createElement('div'); dBtn.className = 'dealer-btn'; dBtn.textContent = 'D';
+  const dp = [{bottom:'55px',left:'calc(50% + 60px)'},{left:'120px',top:'calc(40% + 40px)'},{left:'calc(15% + 70px)',top:'45px'},{right:'calc(15% + 70px)',top:'45px'},{right:'120px',top:'calc(40% + 40px)'},{left:'50%',top:'45px',transform:'translateX(-50%)'}];
+  Object.assign(dBtn.style, dp[state.dealerIdx] || dp[0]);
+  table.appendChild(dBtn);
+
+  // Community cards with flip animation
+  const comm = $('community'); comm.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    if (i < state.community.length) {
+      const el = createCardEl(state.community[i]);
+      if (communityGrew && i >= prevCommunityLen) {
+        // Newly revealed: flip animation
+        el.classList.add('card-flip-in');
+        el.style.animationDelay = `${(i - prevCommunityLen) * 0.2}s`;
+      } else {
+        // Already visible: subtle entrance
+        el.classList.add('card-dealing');
+        el.style.animationDelay = `${i * 0.06}s`;
+      }
+      comm.appendChild(el);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'card card-placeholder';
+      comm.appendChild(ph);
+    }
+  }
+
+  // Pot
+  $('potAmount').textContent = state.pot;
+
+  // Status
+  const phaseNames = {idle:'等待',preflop:'翻牌前',flop:'翻牌',turn:'转牌',river:'河牌',showdown:'摊牌'};
+  $('statusBar').innerHTML = `<span class="connection-dot ${Net.connected?'online':'offline'}"></span>第 ${state.handNum} 手 · ${phaseNames[state.phase] || state.phase}`;
+
+  // Hand rank label
+  updateHandLabel(state);
+}
+
+function updateHandLabel(state) {
+  const label = $('handRankLabel');
+  const me = state.players.find(p => p.id === Net.playerId);
+  if (!me || me.folded || !myHand || myHand.length < 2) { label.classList.remove('visible'); return; }
+
+  if (state.community.length >= 3) {
+    const validCards = [...myHand, ...state.community].filter(c => c);
+    if (validCards.length >= 5) {
+      const ev = evaluateHand(validCards);
+      label.textContent = ev.name;
+      label.classList.add('visible');
+    }
+  } else if (state.community.length === 0) {
+    const r1 = myHand[0]?.rankStr, r2 = myHand[1]?.rankStr;
+    if (r1 && r2) {
+      const suited = myHand[0].suit === myHand[1].suit;
+      label.textContent = `${r1}${r2}${suited ? ' 同花' : ''}`;
+      label.classList.add('visible');
+    }
+  } else {
+    label.classList.remove('visible');
+  }
+}
+
+// ===== ACTION PANEL =====
+function showActions(data) {
+  const panel = $('actionPanel');
+  $('btnCheck').style.display = data.toCall === 0 ? '' : 'none';
+  $('btnCall').style.display = data.toCall > 0 ? '' : 'none';
+  $('callAmount').textContent = data.toCall > 0 ? data.toCall : '';
+
+  const slider = $('raiseRange');
+  slider.min = data.minRaise;
+  slider.max = data.maxRaise;
+  slider.value = data.minRaise;
+  $('raiseValue').textContent = data.minRaise;
+
+  panel.classList.add('active');
+}
+
+function hideActions() { $('actionPanel').classList.remove('active'); }
+
+// ===== NETWORK EVENT HANDLERS =====
+Net.on('room:created', (d) => {
+  roomCode = d.code;
+  $('roomCodeDisplay').textContent = d.code;
+  showScreen('roomScreen');
+  $('voiceToggle').classList.add('visible');
+  toast(d.isBotGame ? '人机对战房间已创建，即将开始...' : '房间已创建');
+});
+
+Net.on('room:joined', (d) => {
+  roomCode = d.code;
+  $('roomCodeDisplay').textContent = d.code;
+  isSpectator = !!d.isSpectator;
+  myReady = false;
+  $('readyBtn').textContent = '准备';
+  $('readyBtn').className = 'btn btn-green';
+  if (isSpectator) {
+    showScreen('table');
+    $('spectatorBadge').classList.add('visible');
+  } else {
+    showScreen('roomScreen');
+    $('voiceToggle').classList.add('visible');
+  }
+  toast(isSpectator ? '已进入观战模式' : '已加入房间');
+});
+
+Net.on('room:state', (d) => {
+  roomCode = d.code;
+  $('roomCodeDisplay').textContent = d.code;
+  isHost = d.hostId === Net.playerId;
+});
+
+Net.on('room:players', (d) => {
+  const container = $('roomPlayers');
+  container.innerHTML = '';
+  isHost = d.hostId === Net.playerId;
+
+  for (const p of d.players) {
+    const card = document.createElement('div');
+    card.className = 'room-player-card';
+    if (p.id === d.hostId) card.classList.add('host');
+    if (p.ready) card.classList.add('ready');
+
+    let badge = '';
+    if (p.isBot) badge = `<div class="rp-badge ready-badge">🤖 Bot · ${({tag:'TAG',lap:'跟注站',maniac:'狂人',rock:'磐石'})[p.botStyle]||'Bot'}</div>`;
+    else if (p.id === d.hostId) badge = '<div class="rp-badge host-badge">👑 房主</div>';
+    else if (p.ready) badge = '<div class="rp-badge ready-badge">✓ 已准备</div>';
+    else badge = '<div class="rp-badge">等待中</div>';
+
+    card.innerHTML = `
+      <div class="rp-name">${p.name}${p.id===Net.playerId?' (你)':''}</div>
+      <div class="rp-stack">${p.stack}</div>
+      ${badge}
+    `;
+    container.appendChild(card);
+  }
+
+  // Show spectators
+  if (d.spectators && d.spectators.length > 0) {
+    const specLabel = document.createElement('div');
+    specLabel.style.cssText = 'width:100%;text-align:center;font-size:11px;color:var(--gold-dim);margin-top:8px;letter-spacing:1px';
+    specLabel.textContent = `👁 ${d.spectators.length} 人观战: ${d.spectators.map(s => s.name).join(', ')}`;
+    container.appendChild(specLabel);
+  }
+
+  $('startGameBtn').style.display = isHost ? '' : 'none';
+});
+
+Net.on('room:playerJoined', () => toast('新玩家加入'));
+Net.on('room:playerLeft', (d) => toast(`${d.name} 离开了`));
+Net.on('room:playerDisconnected', (d) => toast(`${d.name} 断开连接`));
+Net.on('room:hostChanged', (d) => { if (d.hostId === Net.playerId) { isHost = true; toast('你成为了房主'); } });
+
+Net.on('room:gameStarted', () => {
+  showScreen('table');
+  hideActions();
+  if (isSpectator) $('spectatorBadge').classList.add('visible');
+});
+
+Net.on('room:list', (d) => {
+  const list = $('publicRoomList');
+  if (!list) return;
+  
+  if (d.rooms.length === 0) {
+    list.innerHTML = '<div class="room-list-empty">暂无公开房间，创建一个吧</div>';
+    return;
+  }
+  
+  list.innerHTML = '';
+  for (const r of d.rooms) {
+    const card = document.createElement('div');
+    card.className = 'room-card';
+    
+    const statusClass = r.gameRunning ? 'playing' : 'waiting';
+    const statusText = r.gameRunning ? '🎮 游戏中' : '⏳ 等待中';
+    const botLabel = r.hasBots ? ' 🤖人机' : '';
+    
+    card.innerHTML = `
+      <div class="room-card-left">
+        <div class="room-card-code">${r.code}</div>
+        <div class="room-card-host">房主: ${r.hostName}${botLabel}</div>
+      </div>
+      <div class="room-card-right">
+        <div class="room-card-players">${r.playerCount}/${r.maxPlayers}</div>
+        <div class="room-card-status ${statusClass}">${statusText}</div>
+      </div>
+    `;
+    
+    card.addEventListener('click', async () => {
+      const name = $('nameInput').value.trim() || '玩家';
+      try {
+        if (!Net.connected) await Net.connect(getWsUrl());
+        if (!Net.playerId) await Net.auth(name);
+        Net.send('room:join', { code: r.code, name });
+        toast(`正在加入 ${r.code}...`);
+      } catch {
+        showError('无法连接到服务器');
+      }
+    });
+    list.appendChild(card);
+  }
+});
+
+// Auto-refresh room list every 5 seconds when on lobby screen
+let roomListRefreshInterval = null;
+function startRoomListRefresh() {
+  if (roomListRefreshInterval) clearInterval(roomListRefreshInterval);
+  roomListRefreshInterval = setInterval(() => {
+    if (Net.connected && $('lobbyScreen').classList.contains('active')) {
+      Net.send('room:list');
+    }
+  }, 5000);
+}
+function stopRoomListRefresh() {
+  if (roomListRefreshInterval) {
+    clearInterval(roomListRefreshInterval);
+    roomListRefreshInterval = null;
+  }
+}
+
+Net.on('room:error', (d) => { showError(d.message); toast(d.message); });
+Net.on('room:left', () => {
+  if (typeof VoiceChat !== 'undefined') VoiceChat.leave();
+  $('voiceToggle').classList.remove('visible','active','muted');
+  myReady = false;
+  $('readyBtn').textContent = '准备';
+  $('readyBtn').className = 'btn btn-green';
+  showScreen('lobbyScreen');
+  isSpectator = false;
+  $('spectatorBadge').classList.remove('visible');
+  Net.send('room:list');
+  toast('已离开房间');
+});
+Net.on('room:destroyed', () => {
+  if (typeof VoiceChat !== 'undefined') VoiceChat.leave();
+  $('voiceToggle').classList.remove('visible','active','muted');
+  myReady = false;
+  $('readyBtn').textContent = '准备';
+  $('readyBtn').className = 'btn btn-green';
+  showScreen('lobbyScreen');
+  toast('房间已解散');
+});
+
+Net.on('game:state', (state) => renderGame(state));
+
+Net.on('game:yourTurn', (d) => {
+  if (isSpectator) return; // Spectators don't act
+  if (d.playerId !== Net.playerId) return; // Not my turn — don't show panel
+  showActions(d);
+  SFX.yourTurn();
+  if (navigator.vibrate) navigator.vibrate(100);
+});
+
+Net.on('game:handStart', (d) => {
+  hideActions();
+  toast(`第 ${d.handNum} 手开始`);
+  // Deal sounds staggered
+  for (let i = 0; i < 4; i++) setTimeout(() => SFX.deal(), i * 120);
+  // Reset tracking
+  prevPhase = '';
+  prevCommunityLen = 0;
+  prevPot = 0;
+  prevActions = {};
+  prevMyHandIds = null;
+  window._prevOtherHands = {};
+});
+
+Net.on('game:showdown', (d) => {
+  hideActions();
+  const winners = d.winners.map(w => `${w.name}「${w.hand}」+${w.amount}`).join(', ');
+  toast(`摊牌: ${winners}`);
+  // Win celebration particles
+  setTimeout(() => {
+    for (const w of d.winners) {
+      const seatEl = document.querySelector(`.seat.winner .seat-info`);
+      if (seatEl) spawnWinParticles(seatEl);
+    }
+  }, 300);
+});
+
+Net.on('game:handEnd', (d) => {
+  hideActions();
+  const winners = d.winners.map(w => `${w.name} +${w.amount}`).join(', ');
+  toast(`本手结束: ${winners}`);
+  const myId = Net.playerId;
+  const iWon = d.winners.some(w => w.id === myId);
+  if (iWon) SFX.win(); else SFX.lose();
+  // Win particles for me
+  if (iWon) {
+    setTimeout(() => {
+      const mySeat = document.querySelector(`.seat.winner .seat-info`);
+      if (mySeat) spawnWinParticles(mySeat);
+    }, 200);
+  }
+});
+
+Net.on('error', (d) => toast(d.message));
+Net.on('disconnect', () => {
+  $('connDot').className = 'connection-dot offline';
+  if (VoiceChat.isInVoice()) VoiceChat.leave();
+  toast('连接断开，尝试重连...');
+  attemptReconnect();
+});
+
+// ===== RECONNECT =====
+async function attemptReconnect() {
+  for (let i = 0; i < 5; i++) {
+    await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+    try {
+      await Net.connect(getWsUrl());
+      await Net.auth(Net.playerName);
+      $('connDot').className = 'connection-dot online';
+      toast('重连成功');
+      if (roomCode) Net.send('room:join', { code: roomCode, name: Net.playerName });
+      return;
+    } catch {}
+  }
+  toast('重连失败，请刷新页面');
+}
+
+// ===== BUTTON HANDLERS =====
+function getWsUrl() {
+  const loc = window.location;
+  return `${loc.protocol === 'https:' ? 'wss:' : 'ws:'}//${loc.host}`;
+}
+
+$('createRoomBtn').addEventListener('click', async () => {
+  const name = $('nameInput').value.trim() || '玩家';
+  try {
+    if (!Net.connected) await Net.connect(getWsUrl());
+    if (!Net.playerId) await Net.auth(name);
+    Net.send('room:create', { name });
+  } catch { showError('无法连接到服务器'); }
+});
+
+// Bot game button — toggle difficulty panel, then start
+$('botGameBtn').addEventListener('click', async () => {
+  const opts = $('botOptions');
+  if (opts.style.display === 'none') {
+    opts.style.display = 'flex';
+    return;
+  }
+  const name = $('nameInput').value.trim() || '玩家';
+  const difficulty = $('botDifficulty').value;
+  showError('');
+  try {
+    if (!Net.connected) await Net.connect(getWsUrl());
+    if (!Net.playerId) await Net.auth(name);
+    Net.send('room:botGame', { name, difficulty });
+  } catch { showError('无法连接到服务器'); }
+});
+
+$('joinRoomBtn').addEventListener('click', async () => {
+  const name = $('nameInput').value.trim() || '玩家';
+  const code = $('codeInput').value.trim().toUpperCase();
+  showError('');
+  if (!code) { showError('请输入房间号'); return; }
+  try {
+    if (!Net.connected) await Net.connect(getWsUrl());
+    if (!Net.playerId) await Net.auth(name);
+    Net.send('room:join', { code, name });
+  } catch { showError('无法连接到服务器'); }
+});
+
+$('leaveRoomBtn').addEventListener('click', () => Net.send('room:leave'));
+
+// Copy room code button
+$('copyCodeBtn').addEventListener('click', () => {
+  const code = $('roomCodeDisplay').textContent;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(code).then(() => {
+      const btn = $('copyCodeBtn');
+      btn.textContent = '✅ 已复制';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = '📋 复制房间号'; btn.classList.remove('copied'); }, 2000);
+    });
+  } else {
+    // Fallback for older browsers
+    const input = document.createElement('input');
+    input.value = code;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    document.body.removeChild(input);
+    toast('房间号已复制');
+  }
+});
+
+// Share button (Web Share API for mobile)
+$('shareBtn').addEventListener('click', async () => {
+  const code = $('roomCodeDisplay').textContent;
+  const shareData = {
+    title: '德州扑克',
+    text: `来玩德州扑克！房间号: ${code}`,
+    url: window.location.href
+  };
+  
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+    } catch (err) {
+      // User cancelled or error
+      if (err.name !== 'AbortError') toast('分享失败');
+    }
+  } else {
+    // Fallback: copy to clipboard
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(`来玩德州扑克！房间号: ${code}`);
+      toast('邀请信息已复制，去粘贴分享吧');
+    } else {
+      toast('请手动复制房间号: ' + code);
+    }
+  }
+});
+// Ready toggle — tracks ready state and toggles
+let myReady = false;
+$('readyBtn').addEventListener('click', () => {
+  myReady = !myReady;
+  Net.send('room:ready', { ready: myReady });
+  $('readyBtn').textContent = myReady ? '取消准备' : '准备';
+  $('readyBtn').className = myReady ? 'btn btn-red' : 'btn btn-green';
+});
+$('startGameBtn').addEventListener('click', () => Net.send('room:start'));
+
+// Game actions with sound feedback
+$('btnFold').addEventListener('click', () => { hideActions(); SFX.btnClick(); Net.send('game:action', { action: 'fold' }); });
+$('btnCheck').addEventListener('click', () => { hideActions(); SFX.btnClick(); Net.send('game:action', { action: 'check' }); });
+$('btnCall').addEventListener('click', () => { hideActions(); SFX.btnClick(); Net.send('game:action', { action: 'call' }); });
+$('btnAllin').addEventListener('click', () => { hideActions(); SFX.btnClick(); Net.send('game:action', { action: 'allin' }); });
+$('btnRaise').addEventListener('click', () => {
+  const amount = parseInt($('raiseRange').value);
+  hideActions(); SFX.btnClick();
+  Net.send('game:action', { action: 'raise', amount });
+});
+$('raiseRange').addEventListener('input', (e) => { $('raiseValue').textContent = e.target.value; });
+
+// ===== SPECTATE BUTTON =====
+let isSpectator = false;
+
+$('spectateBtn').addEventListener('click', async () => {
+  const name = $('nameInput').value.trim() || '观众';
+  const code = $('codeInput').value.trim().toUpperCase();
+  showError('');
+  if (!code) { showError('请输入房间号'); return; }
+  try {
+    if (!Net.connected) await Net.connect(getWsUrl());
+    if (!Net.playerId) await Net.auth(name);
+    Net.send('room:spectate', { code, name });
+  } catch { showError('无法连接到服务器'); }
+});
+
+// ===== LEADERBOARD =====
+$('leaderboardBtn').addEventListener('click', () => {
+  $('leaderboardOverlay').classList.add('active');
+  Net.send('stats:get', { sortBy: 'totalWon' });
+});
+
+$('lbClose').addEventListener('click', () => {
+  $('leaderboardOverlay').classList.remove('active');
+});
+
+document.querySelectorAll('.lb-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    Net.send('stats:get', { sortBy: tab.dataset.sort });
+  });
+});
+
+Net.on('stats:leaderboard', (d) => {
+  const body = $('lbBody');
+  const empty = $('lbEmpty');
+  if (!d.leaderboard || d.leaderboard.length === 0) {
+    body.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+  body.innerHTML = d.leaderboard.map(p => {
+    const rankClass = p.rank === 1 ? 'gold' : p.rank === 2 ? 'silver' : p.rank === 3 ? 'bronze' : '';
+    const medal = p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : p.rank;
+    return `<tr>
+      <td class="lb-rank ${rankClass}">${medal}</td>
+      <td class="lb-name">${p.name}</td>
+      <td class="lb-num">${p.handsPlayed}</td>
+      <td class="lb-num">${p.handsWon}</td>
+      <td class="lb-num">${p.winRate}%</td>
+      <td class="lb-highlight">${p.totalWon > 0 ? '+' : ''}${p.totalWon}</td>
+      <td style="color:var(--dim);font-size:12px">${p.bestHand}</td>
+    </tr>`;
+  }).join('');
+});
+
+// Close leaderboard on escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && $('leaderboardOverlay').classList.contains('active')) {
+    $('leaderboardOverlay').classList.remove('active');
+  }
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (!$('actionPanel').classList.contains('active')) return;
+  if (e.key === 'f') $('btnFold').click();
+  if (e.key === 'c') { if ($('btnCheck').style.display !== 'none') $('btnCheck').click(); else $('btnCall').click(); }
+  if (e.key === 'r') $('btnRaise').click();
+  if (e.key === 'a') $('btnAllin').click();
+});
+
+// Auto-connect and fetch room list on load
+(async () => {
+  try {
+    await Net.connect(getWsUrl());
+    const name = $('nameInput').value.trim() || '玩家';
+    await Net.auth(name);
+    Net.send('room:list');
+    startRoomListRefresh(); // Auto-refresh every 5s
+  } catch {
+    showError('服务器未启动。请先运行 npm start');
+  }
+})();
+
+// Page visibility change — auto-reconnect when returning to app
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible') {
+    // Page became visible — check if we need to reconnect
+    if (!Net.connected || (Net.ws && Net.ws.readyState !== WebSocket.OPEN)) {
+      console.log('Page visible, reconnecting...');
+      try {
+        await Net.connect(getWsUrl());
+        const name = Net.playerName || $('nameInput').value.trim() || '玩家';
+        await Net.auth(name);
+        $('connDot').className = 'connection-dot online';
+        
+        // If we were in a room, rejoin it
+        if (roomCode) {
+          Net.send('room:join', { code: roomCode, name });
+          toast('已重新连接到房间');
+        } else {
+          Net.send('room:list');
+        }
+      } catch (err) {
+        console.error('Reconnect failed:', err);
+      }
+    }
+  }
+});
+
+// ===== VOICE CHAT (WebRTC P2P) =====
+const VoiceChat = (() => {
+  let localStream = null;
+  const peers = new Map();       // playerId -> RTCPeerConnection
+  const audioEls = new Map();    // playerId -> HTMLAudioElement
+  const voiceMembers = new Set(); // playerIds known to be in voice
+  let inVoice = false;
+  let muted = false;
+
+  const RTC_CONFIG = {
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+  };
+
+  function createPC(peerId, initiator) {
+    if (peers.has(peerId)) {
+      try { peers.get(peerId).close(); } catch {}
+    }
+    const pc = new RTCPeerConnection(RTC_CONFIG);
+    peers.set(peerId, pc);
+
+    // Add local audio track
+    if (localStream) {
+      localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    }
+
+    // Receive remote audio
+    pc.ontrack = (event) => {
+      const [stream] = event.streams;
+      let audio = audioEls.get(peerId);
+      if (!audio) {
+        audio = new Audio();
+        audio.autoplay = true;
+        audioEls.set(peerId, audio);
+      }
+      audio.srcObject = stream;
+      showVoiceIndicator(peerId);
+    };
+
+    // Send ICE candidates via signaling
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        Net.send('voice:ice-candidate', { targetId: peerId, candidate: event.candidate });
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+        removePeer(peerId);
+      }
+    };
+
+    return pc;
+  }
+
+  async function createOffer(peerId) {
+    const pc = createPC(peerId, true);
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      Net.send('voice:offer', { targetId: peerId, sdp: pc.localDescription });
+    } catch (err) {
+      console.error('Create offer failed for', peerId, err);
+    }
+  }
+
+  function showVoiceIndicator(peerId) {
+    const el = document.getElementById('voice-ind-' + peerId);
+    if (el) el.style.display = 'inline-block';
+  }
+
+  function hideVoiceIndicator(peerId) {
+    const el = document.getElementById('voice-ind-' + peerId);
+    if (el) el.style.display = 'none';
+  }
+
+  function removePeer(peerId) {
+    const pc = peers.get(peerId);
+    if (pc) { try { pc.close(); } catch {} peers.delete(peerId); }
+    const audio = audioEls.get(peerId);
+    if (audio) { audio.srcObject = null; audioEls.delete(peerId); }
+    hideVoiceIndicator(peerId);
+  }
+
+  function updateUI() {
+    const btn = $('voiceToggle');
+    btn.classList.remove('active', 'muted');
+    if (inVoice && !muted) {
+      btn.textContent = '🎤';
+      btn.classList.add('active');
+    } else if (inVoice && muted) {
+      btn.textContent = '🔇';
+      btn.classList.add('muted');
+    } else {
+      btn.textContent = '🎤';
+    }
+  }
+
+  return {
+    async join() {
+      if (inVoice) return;
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
+      } catch (err) {
+        toast('无法获取麦克风权限: ' + (err.message || err.name));
+        return;
+      }
+
+      inVoice = true;
+      muted = false;
+      voiceMembers.clear();
+
+      $('voiceToggle').classList.add('active');
+      updateUI();
+      showVoiceIndicator(Net.playerId);
+
+      // Broadcast join to all other players
+      Net.send('voice:join', { name: Net.playerName });
+
+      // Create offers to players already known in voice (initially none)
+      // New joiners will trigger voice:join -> we create offers
+    },
+
+    // Called when another player joins voice
+    onPeerJoin(fromId, fromName) {
+      voiceMembers.add(fromId);
+
+      if (inVoice) {
+        // I was already in voice; create offer to the newcomer
+        createOffer(fromId);
+      }
+      // If I'm not in voice, ignore (I haven't joined yet)
+    },
+
+    leave() {
+      if (!inVoice) return;
+
+      if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+      }
+
+      for (const [id, pc] of peers) {
+        try { pc.close(); } catch {}
+      }
+      peers.clear();
+
+      for (const [id, audio] of audioEls) {
+        audio.srcObject = null;
+      }
+      audioEls.clear();
+
+      voiceMembers.forEach(id => hideVoiceIndicator(id));
+      voiceMembers.clear();
+      hideVoiceIndicator(Net.playerId);
+
+      inVoice = false;
+      muted = false;
+
+      Net.send('voice:leave', {});
+
+      $('voiceToggle').classList.remove('active', 'muted');
+      $('voiceToggle').textContent = '🎤';
+    },
+
+    onPeerLeave(fromId) {
+      voiceMembers.delete(fromId);
+      removePeer(fromId);
+    },
+
+    async onOffer(fromId, sdp) {
+      const pc = createPC(fromId, false);
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        Net.send('voice:answer', { targetId: fromId, sdp: pc.localDescription });
+      } catch (err) {
+        console.error('Handle offer failed from', fromId, err);
+      }
+    },
+
+    async onAnswer(fromId, sdp) {
+      const pc = peers.get(fromId);
+      if (pc) {
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        } catch (err) {
+          console.error('Handle answer failed from', fromId, err);
+        }
+      }
+    },
+
+    async onIceCandidate(fromId, candidate) {
+      const pc = peers.get(fromId);
+      if (pc) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+          // Ignore ICE candidate errors (common during negotiation)
+        }
+      }
+    },
+
+    toggleMute() {
+      if (!inVoice || !localStream) return;
+      muted = !muted;
+      localStream.getAudioTracks().forEach(t => t.enabled = !muted);
+      updateUI();
+    },
+
+    isInVoice() { return inVoice; },
+    isMuted() { return muted; },
+  };
+})();
+
+// Voice signaling message handlers
+Net.on('voice:join', (d) => {
+  VoiceChat.onPeerJoin(d.fromId, d.fromName);
+});
+
+Net.on('voice:leave', (d) => {
+  VoiceChat.onPeerLeave(d.fromId);
+});
+
+Net.on('voice:offer', (d) => {
+  VoiceChat.onOffer(d.fromId, d.sdp);
+});
+
+Net.on('voice:answer', (d) => {
+  VoiceChat.onAnswer(d.fromId, d.sdp);
+});
+
+Net.on('voice:ice-candidate', (d) => {
+  VoiceChat.onIceCandidate(d.fromId, d.candidate);
+});
+
+// Voice toggle button
+$('voiceToggle').addEventListener('click', () => {
+  if (!VoiceChat.isInVoice()) {
+    VoiceChat.join();
+  } else {
+    VoiceChat.toggleMute();
+  }
+});
+
+// Double-click to fully leave voice
+$('voiceToggle').addEventListener('dblclick', (e) => {
+  e.preventDefault();
+  if (VoiceChat.isInVoice()) {
+    VoiceChat.leave();
+    toast('已退出语音');
+  }
+});
+</script>
+</body>
+</html>
