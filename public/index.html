@@ -388,6 +388,9 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
 .seat-bet { position:absolute; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--gold); background:rgba(0,0,0,0.5); padding:2px 8px; border-radius:10px; white-space:nowrap; }
 
 .dealer-btn { position:absolute; width:20px; height:20px; border-radius:50%; background:linear-gradient(135deg,#f0f0f0,#c0c0c0); color:#333; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:900; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.4); z-index:25; }
+.blind-btn { position:absolute; width:18px; height:18px; border-radius:50%; font-family:'JetBrains Mono',monospace; font-size:7px; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.3); z-index:25; }
+.blind-sb { background:linear-gradient(135deg,#4a9eff,#2070d0); color:#fff; }
+.blind-bb { background:linear-gradient(135deg,#ff6a4a,#d04020); color:#fff; }
 
 /* Seat positions — horseshoe layout (Dou Dizhu style) */
 /* seat-0: Me — bottom center */
@@ -924,7 +927,7 @@ function renderGame(state) {
   prevPot = state.pot;
   for (const p of state.players) prevActions[p.id] = p.lastAction;
 
-  table.querySelectorAll('.seat,.dealer-btn').forEach(el => el.remove());
+  table.querySelectorAll('.seat,.dealer-btn,.blind-btn').forEach(el => el.remove());
 
   const me = state.players.find(p => p.id === Net.playerId);
   // Detect if my hand cards actually changed (new deal vs re-render)
@@ -1016,6 +1019,22 @@ function renderGame(state) {
   const dp = [{bottom:'55px',left:'calc(50% + 60px)'},{left:'120px',top:'calc(40% + 40px)'},{left:'calc(15% + 70px)',top:'45px'},{right:'calc(15% + 70px)',top:'45px'},{right:'120px',top:'calc(40% + 40px)'},{left:'50%',top:'45px',transform:'translateX(-50%)'}];
   Object.assign(dBtn.style, dp[state.dealerIdx] || dp[0]);
   table.appendChild(dBtn);
+
+  // Small blind button
+  if (state.sbIdx !== undefined && state.sbIdx !== null) {
+    const sbBtn = document.createElement('div'); sbBtn.className = 'blind-btn blind-sb'; sbBtn.textContent = 'SB';
+    const sbOffset = [{bottom:'40px',left:'calc(50% + 45px)'},{left:'105px',top:'calc(40% + 25px)'},{left:'calc(15% + 55px)',top:'30px'},{right:'calc(15% + 55px)',top:'30px'},{right:'105px',top:'calc(40% + 25px)'},{left:'calc(50% - 15px)',top:'30px'}];
+    Object.assign(sbBtn.style, sbOffset[state.sbIdx] || sbOffset[0]);
+    table.appendChild(sbBtn);
+  }
+
+  // Big blind button
+  if (state.bbIdx !== undefined && state.bbIdx !== null) {
+    const bbBtn = document.createElement('div'); bbBtn.className = 'blind-btn blind-bb'; bbBtn.textContent = 'BB';
+    const bbOffset = [{bottom:'40px',left:'calc(50% + 25px)'},{left:'90px',top:'calc(40% + 10px)'},{left:'calc(15% + 40px)',top:'15px'},{right:'calc(15% + 40px)',top:'15px'},{right:'90px',top:'calc(40% + 10px)'},{left:'calc(50% + 15px)',top:'15px'}];
+    Object.assign(bbBtn.style, bbOffset[state.bbIdx] || bbOffset[0]);
+    table.appendChild(bbBtn);
+  }
 
   // Community cards with flip animation
   const comm = $('community'); comm.innerHTML = '';

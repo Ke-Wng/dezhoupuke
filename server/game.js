@@ -164,6 +164,8 @@ class Game {
       community: this.community,
       pot: this.pot,
       dealerIdx: this.dealerIdx,
+      sbIdx: this.sbIdx,
+      bbIdx: this.bbIdx,
       currentIdx: this.currentIdx,
       phase: this.phase,
       roundBet: this.roundBet,
@@ -222,10 +224,12 @@ class Game {
       return;
     }
 
-    // Move dealer
-    this.dealerIdx = this.nextIdx(this.dealerIdx - 1 + this.players.length);
+    // Move dealer clockwise
+    this.dealerIdx = (this.dealerIdx + 1) % this.players.length;
     const sbIdx = this.nextIdx(this.dealerIdx);
     const bbIdx = this.nextIdx(sbIdx);
+    this.sbIdx = sbIdx; // Save for later phases
+    this.bbIdx = bbIdx; // Save for later phases
 
     this.postBlind(this.players[sbIdx], SB);
     this.postBlind(this.players[bbIdx], BB);
@@ -430,10 +434,10 @@ class Game {
       player._ws.send(JSON.stringify({ type: 'game:yourTurn', data: actionData }));
     }
 
-    // Auto-fold timeout (30 seconds)
-    this.actionTimeout = setTimeout(() => {
-      this.handleAction(player.id, { action: 'fold' });
-    }, 30000);
+    // Auto-fold timeout (30 seconds) - disabled
+    // this.actionTimeout = setTimeout(() => {
+    //   this.handleAction(player.id, { action: 'fold' });
+    // }, 30000);
   }
 
   handleAction(playerId, actionData) {
@@ -505,16 +509,17 @@ class Game {
     }
 
     this.actedCount++;
+
+    // Update current player first, then broadcast
+    this.currentIdx = this.nextIdx(this.currentIdx);
     this.broadcastState();
 
-    // Check round end
-    this.currentIdx = this.nextIdx(this.currentIdx);
     const inHand = this.inHandPlayers();
     if (inHand.length <= 1) { this.endHand(); return; }
 
     const canAct = this.canActPlayers();
     const allMatched = canAct.every(p => p.bet === this.roundBet);
-    if (allMatched && this.actedCount >= inHand.length) {
+    if (allMatched && this.actedCount >= canAct.length) {
       this.advancePhase();
     } else {
       this.scheduleNextAction();
@@ -534,15 +539,15 @@ class Game {
     const prevPhase = this.phase;
     if (this.phase === 'preflop') {
       this.phase = 'flop';
-      this.deck.pop();
+      this.deck.pop(); // Burn card
       this.community.push(this.deck.pop(), this.deck.pop(), this.deck.pop());
     } else if (this.phase === 'flop') {
       this.phase = 'turn';
-      this.deck.pop();
+      this.deck.pop(); // Burn card
       this.community.push(this.deck.pop());
     } else if (this.phase === 'turn') {
       this.phase = 'river';
-      this.deck.pop();
+      this.deck.pop(); // Burn card
       this.community.push(this.deck.pop());
     } else if (this.phase === 'river') {
       this.showdown();
@@ -557,6 +562,7 @@ class Game {
       return;
     }
 
+    // Post-flop: start from small blind position (or next active if SB folded)
     this.currentIdx = this.nextIdx(this.dealerIdx);
     setTimeout(() => this.processNextAction(), 1000);
   }
