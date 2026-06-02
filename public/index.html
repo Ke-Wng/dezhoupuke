@@ -410,10 +410,12 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
 .seat-5 .seat-bet { bottom:-24px; }
 
 /* My hand — fixed at bottom, outside table */
-.my-hand { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); display:flex; gap:6px; z-index:35; }
+.my-hand { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); display:flex; gap:6px; z-index:35; transition:bottom 0.3s ease; }
 .my-hand .card { width:56px; height:80px; }
 .my-hand .card:hover { transform:translateY(-6px); box-shadow:0 8px 20px rgba(0,0,0,0.4); }
 .my-hand .card .rank { font-size:18px; } .my-hand .card .suit { font-size:20px; } .my-hand .card .rank-br { font-size:14px; }
+/* Push hand cards up when action panel is visible */
+#table-container.action-active .my-hand { bottom:110px; }
 
 .hand-rank-label { position:absolute; bottom:140px; left:50%; transform:translateX(-50%); font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--gold); background:rgba(0,0,0,0.6); padding:4px 16px; border-radius:12px; border:1px solid rgba(212,168,64,0.3); z-index:30; white-space:nowrap; opacity:0; transition:opacity 0.3s; }
 .hand-rank-label.visible { opacity:1; }
@@ -460,6 +462,8 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
   .my-hand .card .rank { font-size:14px; } .my-hand .card .suit { font-size:16px; }
   .my-hand .card .rank-br { font-size:10px; }
   .my-hand .card:hover { transform:translateY(-4px); }
+  /* Push hand up above action panel on mobile */
+  #table-container.action-active .my-hand { bottom:72px; }
   /* Seat info — compact */
   .seat-info { padding:3px 8px; min-width:60px; border-radius:6px; }
   .seat-name { font-size:10px; }
@@ -1084,9 +1088,13 @@ function showActions(data) {
   $('raiseValue').textContent = data.minRaise;
 
   panel.classList.add('active');
+  $('table-container').classList.add('action-active');
 }
 
-function hideActions() { $('actionPanel').classList.remove('active'); }
+function hideActions() {
+  $('actionPanel').classList.remove('active');
+  $('table-container').classList.remove('action-active');
+}
 
 // ===== NETWORK EVENT HANDLERS =====
 Net.on('room:created', (d) => {
