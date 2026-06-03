@@ -139,6 +139,7 @@ class Game {
     this.actedCount = 0;
     this.handNum = 0;
     this.winners = [];
+    this.refunds = [];
     this.actionTimeout = null;
     this.onBroadcast = null; // callback(type, data)
     this.onGameEnd = null;
@@ -184,6 +185,7 @@ class Game {
       roundBet: this.roundBet,
       handNum: this.handNum,
       winners: this.winners,
+      refunds: this.refunds,
     };
   }
 
@@ -217,6 +219,7 @@ class Game {
     this.community = [];
     this.pot = 0;
     this.winners = [];
+    this.refunds = [];
     this.phase = 'preflop';
     this.lastRaise = this.bb;
     this.minRaise = this.bb;
@@ -637,16 +640,24 @@ class Game {
     let prevLevel = 0;
     const awards = {}; // playerId → total won
 
+    const refunds = {};
+
     for (const level of levels) {
       const layerSize = level - prevLevel;
       if (layerSize <= 0) { prevLevel = level; continue; }
 
       // Every player with totalBet >= level contributes layerSize
-      let layerPot = 0;
-      for (const p of this.players) {
-        if (p.totalBet >= level) layerPot += layerSize;
-      }
+      const contributors = this.players.filter(p => p.totalBet >= level);
+      const layerPot = contributors.length * layerSize;
       if (layerPot <= 0) { prevLevel = level; continue; }
+
+      // A layer funded by only one player is an unmatched bet return, not a won pot.
+      if (contributors.length === 1) {
+        const pid = contributors[0].id;
+        refunds[pid] = (refunds[pid] || 0) + layerPot;
+        prevLevel = level;
+        continue;
+      }
 
       // Eligible winners: in-hand (not folded) with totalBet >= level
       const eligible = evals.filter(e => e.player.totalBet >= level);
@@ -675,6 +686,15 @@ class Game {
 
     // 3) Apply winnings and build result
     this.winners = [];
+    this.refunds = [];
+    for (const [pid, amount] of Object.entries(refunds)) {
+      if (amount <= 0) continue;
+      const player = this.players.find(p => p.id === pid);
+      if (!player) continue;
+      player.stack += amount;
+      this.refunds.push({ id: pid, name: player.name, amount });
+    }
+
     for (const [pid, amount] of Object.entries(awards)) {
       if (amount <= 0) continue;
       const e = evals.find(e => e.player.id === pid);
@@ -690,12 +710,12 @@ class Game {
     this.winners.sort((a, b) => b.amount - a.amount);
 
     this.broadcastState();
-    this.broadcast('game:showdown', { winners: this.winners });
+    this.broadcast('game:showdown', { winners: this.winners, refunds: this.refunds });
     gameLogger.logPhaseChange(this, 'showdown');
     gameLogger.logResult(this, this.winners);
 
     setTimeout(() => {
-      this.broadcast('game:handEnd', { winners: this.winners });
+      this.broadcast('game:handEnd', { winners: this.winners, refunds: this.refunds });
       if (this.onGameEnd) this.onGameEnd();
     }, 3000);
   }

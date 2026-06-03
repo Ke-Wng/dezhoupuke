@@ -66,6 +66,11 @@ function createGame(playerCount, opts = {}) {
 }
 
 function cardStr(c) { return c ? c.rankStr + c.suitStr : '??'; }
+function totalSettled(game) {
+  const won = game.winners.reduce((s, w) => s + w.amount, 0);
+  const refunded = (game.refunds || []).reduce((s, r) => s + r.amount, 0);
+  return won + refunded;
+}
 function printState(game) {
   for (const p of game.players) {
     const st = p.folded ? '弃牌' : (p.allIn ? 'ALLIN' : '在局');
@@ -609,7 +614,7 @@ function test_sidePot() {
     }
 
     if (game.phase === 'showdown' || game.winners.length > 0) {
-      const totalDistributed = game.winners.reduce((s, w) => s + w.amount, 0);
+      const totalDistributed = totalSettled(game);
       assert('总分配金额等于底池', totalDistributed === game.pot,
         `分配${totalDistributed} ≠ 底池${game.pot}`);
 
@@ -657,7 +662,7 @@ function test_sidePot() {
     assert('短码玩家已ALL IN', shortPlayer.allIn);
 
     // Verify total distribution = pot
-    const totalDistributed = game.winners.reduce((s, w) => s + w.amount, 0);
+    const totalDistributed = totalSettled(game);
     assert('分配总额 = 底池', totalDistributed === game.pot,
       `${totalDistributed} ≠ ${game.pot}`);
 
@@ -699,7 +704,7 @@ function test_sidePot() {
 
     assert('到达摊牌', game.phase === 'showdown' || game.winners.length > 0);
 
-    const totalDistributed = game.winners.reduce((s, w) => s + w.amount, 0);
+    const totalDistributed = totalSettled(game);
     assert('分配总额 = 底池', totalDistributed === game.pot,
       `${totalDistributed} ≠ ${game.pot}`);
 
