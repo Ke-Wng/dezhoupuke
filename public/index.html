@@ -406,17 +406,6 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
 .interact-trigger { position:absolute; z-index:200; width:28px; height:28px; border-radius:50%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); color:rgba(255,255,255,0.3); font-size:14px; display:none; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
 .interact-trigger:hover { background:rgba(212,168,64,0.2); border-color:var(--gold); color:var(--gold); }
 
-/* ===== VOICE ANNOUNCEMENT TOGGLE ===== */
-.voice-announce-toggle {
-  position:fixed; top:12px; right:60px; z-index:60;
-  background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1);
-  border-radius:20px; padding:6px 14px; cursor:pointer;
-  font-size:16px; line-height:1; transition:all 0.3s;
-  backdrop-filter:blur(8px);
-}
-.voice-announce-toggle:hover { border-color:var(--gold-dim); }
-.voice-announce-toggle.active { border-color:var(--gold); background:rgba(212,168,64,0.12); }
-
 /* ===== SPECTATOR BADGE ===== */
 .spectator-badge {
   position:fixed; top:12px; left:16px; z-index:60;
@@ -426,29 +415,6 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
 }
 .spectator-badge.visible { display:flex; align-items:center; gap:6px; }
 .spectator-badge .eye { font-size:14px; }
-
-/* ===== VOICE CHAT ===== */
-.voice-toggle {
-  position:fixed; top:12px; right:150px; z-index:60;
-  background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1);
-  border-radius:20px; padding:6px 14px; cursor:pointer;
-  font-size:16px; line-height:1; transition:all 0.3s;
-  backdrop-filter:blur(8px); display:none;
-}
-.voice-toggle.visible { display:block; }
-.voice-toggle:hover { border-color:var(--gold-dim); }
-.voice-toggle.active { border-color:#40a060; background:rgba(64,160,96,0.15); }
-.voice-toggle.muted { border-color:var(--red); background:rgba(204,51,51,0.1); }
-.voice-indicator {
-  display:inline-block; width:8px; height:8px; border-radius:50%;
-  background:#40a060; margin-left:4px; vertical-align:middle;
-  box-shadow:0 0 6px rgba(64,160,96,0.5);
-  animation:voicePulse 1.5s ease-in-out infinite;
-}
-@keyframes voicePulse {
-  0%,100%{opacity:0.4;transform:scale(0.8)}
-  50%{opacity:1;transform:scale(1.2)}
-}
 
 /* ===== AUTH TABS/FORMS ===== */
 .auth-tabs { display:flex; gap:6px; margin-bottom:16px; }
@@ -768,10 +734,8 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
   .room-code-big { font-size:32px; }
   /* Bet */
   .seat-bet { font-size:10px; padding:1px 6px; }
-  /* Voice/Sound toggles */
-  .voice-toggle, .sound-toggle, .voice-announce-toggle { padding:4px 10px; font-size:13px; }
-  .voice-toggle { right:110px; }
-  .voice-announce-toggle { right:50px; }
+  /* Sound toggles */
+  .sound-toggle { padding:4px 10px; font-size:13px; }
   /* Seat repositions for mobile */
   .seat-0 { bottom:0; }
   .seat-1 { left:0; top:38%; }
@@ -1285,8 +1249,6 @@ body { background:#0a0a0a; font-family:'Noto Sans SC',sans-serif; color:var(--wh
 </div>
 
 <div class="spectator-badge" id="spectatorBadge"><span class="eye">👁</span> 观战中</div>
-<div class="voice-toggle" id="voiceToggle" title="语音聊天">🎤</div>
-<div class="voice-announce-toggle" id="voiceAnnounceToggle" title="语音播报">🗣️</div>
 <div class="sound-toggle" id="soundToggle" title="音效开关">🔊</div>
 <div class="music-toggle" id="musicToggle" title="背景音乐">🎵</div>
 <!-- Player interaction panel (positioned dynamically) -->
@@ -2325,58 +2287,6 @@ if ($('tarotDrawBtn')) {
   });
 }
 
-// ===== VOICE ANNOUNCEMENT SYSTEM (Web Speech API) =====
-const VoiceAnnounce = (() => {
-  let enabled = false;
-  let lastAnnounce = 0;
-  try { enabled = localStorage.getItem('poker_voiceAnnounce') === 'true'; } catch {}
-
-  function speak(text) {
-    if (!enabled) return;
-    if (!window.speechSynthesis) return;
-    const now = Date.now();
-    if (now - lastAnnounce < 800) return;
-    lastAnnounce = now;
-    try {
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = 'zh-CN';
-      utter.rate = 1.1;
-      utter.volume = 0.8;
-      window.speechSynthesis.speak(utter);
-    } catch {}
-  }
-
-  return {
-    toggle() {
-      enabled = !enabled;
-      try { localStorage.setItem('poker_voiceAnnounce', enabled ? 'true' : 'false'); } catch {}
-      if (!enabled && window.speechSynthesis) window.speechSynthesis.cancel();
-      return enabled;
-    },
-    isEnabled() { return enabled; },
-    yourTurn() { speak('轮到你了'); },
-    playerAction(name, action) {
-      const actionNames = { fold: '弃牌', check: '过牌', call: '跟注', raise: '加注', allin: '全押' };
-      const actionText = actionNames[action] || action;
-      speak(name + ' ' + actionText);
-    }
-  };
-})();
-
-function updateVoiceAnnounceUI() {
-  const btn = $('voiceAnnounceToggle');
-  if (VoiceAnnounce.isEnabled()) btn.classList.add('active');
-  else btn.classList.remove('active');
-}
-updateVoiceAnnounceUI();
-
-$('voiceAnnounceToggle').addEventListener('click', () => {
-  VoiceAnnounce.toggle();
-  updateVoiceAnnounceUI();
-  toast(VoiceAnnounce.isEnabled() ? '语音播报已开启' : '语音播报已关闭');
-});
-
 // ===== WIN PARTICLES =====
 function spawnWinParticles(targetEl) {
   if (!targetEl) return;
@@ -2571,11 +2481,6 @@ function renderGame(state) {
       else if (p.lastAction === 'raise') SFX.raise();
       else if (p.lastAction === 'allin') SFX.allin();
 
-      // Voice announcement for other players' actions
-      if (p.id !== Net.playerId && p.lastAction !== 'winner') {
-        VoiceAnnounce.playerAction(p.name, p.lastAction);
-      }
-
       // Action log entry
       const label = ACTION_LABELS[p.lastAction] || p.lastAction;
       let amount = 0;
@@ -2757,7 +2662,7 @@ function renderGame(state) {
       infoEl.style.borderColor = '';
     }
     infoEl.innerHTML = `
-      <div class="seat-name" style="color:${seatColor}"><span style="color:${seatColor}">●</span> ${seatAvatar} ${p.name}${p.isBot?' <span class="bot-badge">BOT</span>':''}${p.id===Net.playerId?' (你)':''}<span class="voice-indicator" id="voice-ind-${p.id}" style="display:none"></span></div>
+      <div class="seat-name" style="color:${seatColor}"><span style="color:${seatColor}">●</span> ${seatAvatar} ${p.name}${p.isBot?' <span class="bot-badge">BOT</span>':''}${p.id===Net.playerId?' (你)':''}</div>
       <div class="seat-stack">${p.stack}</div>
       <div class="seat-action ${actionClass} ${p.lastAction ? 'seat-action-anim' : ''}">${actionMap[p.lastAction]||''}</div>
     `;
@@ -2923,7 +2828,6 @@ function showActions(data) {
   $('raiseValue').textContent = data.minRaise;
   panel.classList.add('active');
   $('table-container').classList.add('action-active');
-  VoiceAnnounce.yourTurn();
 }
 
 function hideActions() {
@@ -2942,7 +2846,6 @@ Net.on('room:created', (d) => {
   roomCode = d.code;
   $('roomCodeDisplay').textContent = d.code;
   showScreen('roomScreen');
-  $('voiceToggle').classList.add('visible');
   toast(d.isBotGame ? '人机对战房间已创建，即将开始...' : '房间已创建');
 });
 
@@ -2958,7 +2861,6 @@ Net.on('room:joined', (d) => {
     $('spectatorBadge').classList.add('visible');
   } else {
     showScreen('roomScreen');
-    $('voiceToggle').classList.add('visible');
   }
   toast(isSpectator ? '已进入观战模式' : '已加入房间');
 });
@@ -3086,8 +2988,6 @@ function stopRoomListRefresh() {
 
 Net.on('room:error', (d) => { showError(d.message); toast(d.message); });
 Net.on('room:left', () => {
-  if (typeof VoiceChat !== 'undefined') VoiceChat.leave();
-  $('voiceToggle').classList.remove('visible','active','muted');
   $('actionLogToggle').classList.remove('visible');
   $('actionLogPanel').classList.remove('open');
   myReady = false;
@@ -3100,8 +3000,6 @@ Net.on('room:left', () => {
   toast('已离开房间');
 });
 Net.on('room:destroyed', () => {
-  if (typeof VoiceChat !== 'undefined') VoiceChat.leave();
-  $('voiceToggle').classList.remove('visible','active','muted');
   $('actionLogToggle').classList.remove('visible');
   $('actionLogPanel').classList.remove('open');
   myReady = false;
@@ -3182,7 +3080,6 @@ Net.on('game:waitingForNext', (d) => {
 Net.on('error', (d) => toast(d.message));
 Net.on('disconnect', () => {
   $('connDot').className = 'connection-dot offline';
-  if (VoiceChat.isInVoice()) VoiceChat.leave();
   toast('连接断开，尝试重连...');
   attemptReconnect();
 });
@@ -3365,8 +3262,6 @@ $('leaveRoomBtn').addEventListener('click', () => {
   showScreen('lobbyScreen');
   $('table-container').classList.remove('action-active');
   hideActions();
-  if (typeof VoiceChat !== 'undefined') VoiceChat.leave();
-  $('voiceToggle').classList.remove('visible','active','muted');
   $('actionLogToggle').classList.remove('visible');
   $('actionLogPanel').classList.remove('open');
   myReady = false;
@@ -3784,297 +3679,6 @@ document.addEventListener('visibilitychange', async () => {
   }
 });
 
-// ===== VOICE CHAT (WebRTC P2P) =====
-const VoiceChat = (() => {
-  let localStream = null;
-  const peers = new Map();       // playerId -> RTCPeerConnection
-  const audioEls = new Map();    // playerId -> HTMLAudioElement
-  const voiceMembers = new Set(); // playerIds known to be in voice
-  let inVoice = false;
-  let muted = false;
-
-  const RTC_CONFIG = {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' },
-      { urls: 'stun:stun.stunprotocol.org:3478' },
-    ]
-  };
-
-  function createPC(peerId, initiator) {
-    if (peers.has(peerId)) {
-      try { peers.get(peerId).close(); } catch {}
-    }
-    const pc = new RTCPeerConnection(RTC_CONFIG);
-    peers.set(peerId, pc);
-
-    // Add local audio track
-    if (localStream) {
-      localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-    }
-
-    // Receive remote audio
-    pc.ontrack = (event) => {
-      const [stream] = event.streams;
-      let audio = audioEls.get(peerId);
-      if (!audio) {
-        audio = new Audio();
-        audio.autoplay = true;
-        audio.playsInline = true;
-        audioEls.set(peerId, audio);
-      }
-      audio.srcObject = stream;
-      audio.play().catch(() => {
-        // Retry on user interaction
-        const resume = () => { audio.play().catch(()=>{}); document.removeEventListener('click', resume); };
-        document.addEventListener('click', resume, { once: true });
-      });
-      showVoiceIndicator(peerId);
-    };
-
-    // Send ICE candidates via signaling
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        Net.send('voice:ice-candidate', { targetId: peerId, candidate: event.candidate });
-      }
-    };
-
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-        removePeer(peerId);
-      }
-    };
-
-    return pc;
-  }
-
-  async function createOffer(peerId) {
-    const pc = createPC(peerId, true);
-    try {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      Net.send('voice:offer', { targetId: peerId, sdp: pc.localDescription });
-    } catch (err) {
-      console.error('Create offer failed for', peerId, err);
-    }
-  }
-
-  function showVoiceIndicator(peerId) {
-    const el = document.getElementById('voice-ind-' + peerId);
-    if (el) el.style.display = 'inline-block';
-  }
-
-  function hideVoiceIndicator(peerId) {
-    const el = document.getElementById('voice-ind-' + peerId);
-    if (el) el.style.display = 'none';
-  }
-
-  function removePeer(peerId) {
-    const pc = peers.get(peerId);
-    if (pc) { try { pc.close(); } catch {} peers.delete(peerId); }
-    const audio = audioEls.get(peerId);
-    if (audio) { audio.srcObject = null; audioEls.delete(peerId); }
-    hideVoiceIndicator(peerId);
-  }
-
-  function updateUI() {
-    const btn = $('voiceToggle');
-    btn.classList.remove('active', 'muted');
-    if (inVoice && !muted) {
-      btn.textContent = '🎤';
-      btn.classList.add('active');
-    } else if (inVoice && muted) {
-      btn.textContent = '🔇';
-      btn.classList.add('muted');
-    } else {
-      btn.textContent = '🎤';
-    }
-  }
-
-  return {
-    async join() {
-      if (inVoice) return;
-
-      // Check secure context (HTTPS required for getUserMedia on most browsers)
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        toast('语音需要 HTTPS 连接，当前浏览器不支持麦克风');
-        console.warn('[VoiceChat] getUserMedia not available. Is the page served over HTTPS?');
-        return;
-      }
-
-      if (!window.isSecureContext) {
-        toast('语音聊天需要 HTTPS，请通过 HTTPS 访问页面');
-        console.warn('[VoiceChat] Not a secure context. Microphone requires HTTPS.');
-        return;
-      }
-
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-        });
-      } catch (err) {
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          toast('麦克风权限被拒绝，请在浏览器设置中允许麦克风访问');
-        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-          toast('未检测到麦克风设备');
-        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-          toast('麦克风被其他应用占用，请关闭后重试');
-        } else {
-          toast('无法获取麦克风: ' + (err.message || err.name));
-        }
-        console.warn('[VoiceChat] getUserMedia error:', err);
-        return;
-      }
-
-      inVoice = true;
-      muted = false;
-      voiceMembers.clear();
-
-      $('voiceToggle').classList.add('active');
-      updateUI();
-      showVoiceIndicator(Net.playerId);
-
-      // Broadcast join to all other players
-      Net.send('voice:join', { name: Net.playerName });
-
-      // Create offers to players already known in voice (initially none)
-      // New joiners will trigger voice:join -> we create offers
-    },
-
-    // Called when another player joins voice
-    onPeerJoin(fromId, fromName) {
-      voiceMembers.add(fromId);
-
-      if (inVoice) {
-        // I was already in voice; create offer to the newcomer
-        createOffer(fromId);
-      }
-      // If I'm not in voice, ignore (I haven't joined yet)
-    },
-
-    leave() {
-      if (!inVoice) return;
-
-      if (localStream) {
-        localStream.getTracks().forEach(t => t.stop());
-        localStream = null;
-      }
-
-      for (const [id, pc] of peers) {
-        try { pc.close(); } catch {}
-      }
-      peers.clear();
-
-      for (const [id, audio] of audioEls) {
-        audio.srcObject = null;
-      }
-      audioEls.clear();
-
-      voiceMembers.forEach(id => hideVoiceIndicator(id));
-      voiceMembers.clear();
-      hideVoiceIndicator(Net.playerId);
-
-      inVoice = false;
-      muted = false;
-
-      Net.send('voice:leave', {});
-
-      $('voiceToggle').classList.remove('active', 'muted');
-      $('voiceToggle').textContent = '🎤';
-    },
-
-    onPeerLeave(fromId) {
-      voiceMembers.delete(fromId);
-      removePeer(fromId);
-    },
-
-    async onOffer(fromId, sdp) {
-      const pc = createPC(fromId, false);
-      try {
-        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        Net.send('voice:answer', { targetId: fromId, sdp: pc.localDescription });
-      } catch (err) {
-        console.error('Handle offer failed from', fromId, err);
-      }
-    },
-
-    async onAnswer(fromId, sdp) {
-      const pc = peers.get(fromId);
-      if (pc) {
-        try {
-          await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-        } catch (err) {
-          console.error('Handle answer failed from', fromId, err);
-        }
-      }
-    },
-
-    async onIceCandidate(fromId, candidate) {
-      const pc = peers.get(fromId);
-      if (pc) {
-        try {
-          await pc.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (err) {
-          // Ignore ICE candidate errors (common during negotiation)
-        }
-      }
-    },
-
-    toggleMute() {
-      if (!inVoice || !localStream) return;
-      muted = !muted;
-      localStream.getAudioTracks().forEach(t => t.enabled = !muted);
-      updateUI();
-    },
-
-    isInVoice() { return inVoice; },
-    isMuted() { return muted; },
-  };
-})();
-
-// Voice signaling message handlers
-Net.on('voice:join', (d) => {
-  VoiceChat.onPeerJoin(d.fromId, d.fromName);
-});
-
-Net.on('voice:leave', (d) => {
-  VoiceChat.onPeerLeave(d.fromId);
-});
-
-Net.on('voice:offer', (d) => {
-  VoiceChat.onOffer(d.fromId, d.sdp);
-});
-
-Net.on('voice:answer', (d) => {
-  VoiceChat.onAnswer(d.fromId, d.sdp);
-});
-
-Net.on('voice:ice-candidate', (d) => {
-  VoiceChat.onIceCandidate(d.fromId, d.candidate);
-});
-
-// Voice toggle button
-$('voiceToggle').addEventListener('click', () => {
-  if (!VoiceChat.isInVoice()) {
-    VoiceChat.join();
-  } else {
-    VoiceChat.toggleMute();
-  }
-});
-
-// Double-click to fully leave voice
-$('voiceToggle').addEventListener('dblclick', (e) => {
-  e.preventDefault();
-  if (VoiceChat.isInVoice()) {
-    VoiceChat.leave();
-    toast('已退出语音');
-  }
-});
 </script>
 </body>
 </html>

@@ -563,33 +563,6 @@ wss.on('connection', (ws) => {
         break;
       }
 
-      // ===== Voice Chat Signaling =====
-      case 'voice:join': {
-        if (!currentRoom) break;
-        currentRoom.routeVoiceSignal(playerId, 'voice:join', data);
-        break;
-      }
-      case 'voice:leave': {
-        if (!currentRoom) break;
-        currentRoom.routeVoiceSignal(playerId, 'voice:leave', data);
-        break;
-      }
-      case 'voice:offer': {
-        if (!currentRoom) break;
-        currentRoom.routeVoiceSignal(playerId, 'voice:offer', data);
-        break;
-      }
-      case 'voice:answer': {
-        if (!currentRoom) break;
-        currentRoom.routeVoiceSignal(playerId, 'voice:answer', data);
-        break;
-      }
-      case 'voice:ice-candidate': {
-        if (!currentRoom) break;
-        currentRoom.routeVoiceSignal(playerId, 'voice:ice-candidate', data);
-        break;
-      }
-
       // ===== Player Interaction (gifts/emojis) =====
       case 'room:interact': {
         if (!currentRoom) break;
@@ -609,10 +582,6 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     if (playerId) {
-      // Notify others that this player left voice
-      if (currentRoom) {
-        currentRoom.routeVoiceSignal(playerId, 'voice:leave', {});
-      }
       playerSockets.delete(playerId);
       if (currentRoom) {
         if (ws.isSpectator) {

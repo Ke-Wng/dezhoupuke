@@ -330,34 +330,6 @@ class Room {
     this.game.handleAction(playerId, actionData);
   }
 
-  // ===== Voice Chat Signaling =====
-  // Route WebRTC signaling messages between players
-  routeVoiceSignal(fromId, msgType, data) {
-    const fromPlayer = this.players.get(fromId);
-    if (!fromPlayer) return;
-
-    // If targeting a specific player, route to them
-    if (data.targetId) {
-      const target = this.players.get(data.targetId);
-      if (target && target.ws && target.ws.readyState === 1) {
-        target.ws.send(JSON.stringify({
-          type: msgType,
-          data: { ...data, fromId, fromName: fromPlayer.name }
-        }));
-      }
-    } else {
-      // Broadcast to all other players (for join/leave events)
-      for (const [id, p] of this.players) {
-        if (id !== fromId && p.ws && p.ws.readyState === 1) {
-          p.ws.send(JSON.stringify({
-            type: msgType,
-            data: { ...data, fromId, fromName: fromPlayer.name }
-          }));
-        }
-      }
-    }
-  }
-
   sendTo(playerId, type, data) {
     const player = this.players.get(playerId);
     if (player && player.ws && player.ws.readyState === 1) {
