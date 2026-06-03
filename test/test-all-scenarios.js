@@ -304,15 +304,16 @@ function test_shortStackAllIn() {
   printState(game);
   
   // Short stack goes ALL IN preflop
-  if (game.players[game.currentIdx].id === shortStack.id) {
-    playActions(game, [[shortStack.name, 'allin']]);
-  } else {
-    // Current player calls, then short stack goes all in
+  // 先让其他人 call，直到短筹码玩家轮到
+  let waitSafety = 10;
+  while (game.players[game.currentIdx].id !== shortStack.id && waitSafety-- > 0) {
     const current = game.players[game.currentIdx];
+    if (current.folded || current.allIn) break;
     playActions(game, [[current.name, 'call']]);
-    if (game.players[game.currentIdx].id === shortStack.id) {
-      playActions(game, [[shortStack.name, 'allin']]);
-    }
+  }
+  // 短筹码玩家 ALL IN
+  if (game.players[game.currentIdx].id === shortStack.id && !shortStack.allIn) {
+    playActions(game, [[shortStack.name, 'allin']]);
   }
   
   // Others call

@@ -281,6 +281,7 @@ class Game {
     player.bet = actual;
     player.totalBet += actual;
     this.pot += actual;
+    this.roundBet = Math.max(this.roundBet, actual);
     if (player.stack === 0) player.allIn = true;
     const blindType = amount === this.sb ? '小盲' : '大盲';
     gameLogger.logAction(this, player, blindType, actual);
