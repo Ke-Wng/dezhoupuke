@@ -24,6 +24,7 @@ class Room {
     this.spectators = new Map();
     this.game = null;
     this.gameRunning = false;
+    this.handNum = 0;
     this.autoStartTimer = null;
     this.nextHandTimer = null;
     this.lastVacantAt = null;
@@ -287,6 +288,7 @@ class Room {
       allInOrFold: this.allInOrFold,
       gameMode: this.gameMode,
     });
+    this.game.handNum = this.handNum;
 
     this.game.onBroadcast = (type, data) => {
       if (type === 'game:state') return;
@@ -315,6 +317,7 @@ class Room {
         const rp = this.players.get(gp.id);
         if (rp) rp.stack = gp.stack;
       }
+      this.handNum = this.game.handNum;
       this.gameRunning = false;
 
       if (this.game.winners.length > 0 && this.onStatsReport) {
