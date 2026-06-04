@@ -2257,32 +2257,32 @@
       .seat-2 .seat-bet {
         bottom: -24px;
       }
-      /* seat-3: Top-right */
+      /* seat-3: Top-center */
       .seat-3 {
-        right: 18%;
-        top: -15px;
-      }
-      .seat-3 .seat-bet {
-        bottom: -24px;
-      }
-      /* seat-4: Right */
-      .seat-4 {
-        right: 2%;
-        top: 35%;
-        transform: translateY(-50%);
-      }
-      .seat-4 .seat-bet {
-        left: -50px;
-        top: 50%;
-      }
-      /* seat-5: Top-center */
-      .seat-5 {
         left: 50%;
         top: -15px;
         transform: translateX(-50%);
       }
-      .seat-5 .seat-bet {
+      .seat-3 .seat-bet {
         bottom: -24px;
+      }
+      /* seat-4: Top-right */
+      .seat-4 {
+        right: 18%;
+        top: -15px;
+      }
+      .seat-4 .seat-bet {
+        bottom: -24px;
+      }
+      /* seat-5: Right */
+      .seat-5 {
+        right: 2%;
+        top: 35%;
+        transform: translateY(-50%);
+      }
+      .seat-5 .seat-bet {
+        left: -50px;
+        top: 50%;
       }
 
       /* My hand — fixed at bottom, outside table */
@@ -2679,20 +2679,25 @@
           top: -6px;
         }
         .seat-3 {
+          left: 50%;
+          top: -12px;
+          transform: translateX(-50%);
+        }
+        .seat-4 {
           right: 14%;
           top: -6px;
         }
-        .seat-4 {
+        .seat-4 .seat-bet {
+          bottom: -20px;
+        }
+        .seat-5 {
           right: 1%;
           top: 44%;
           transform: translateY(-50%);
         }
-        .seat-4 .seat-bet {
+        .seat-5 .seat-bet {
           left: -28px;
           top: 50%;
-        }
-        .seat-5 {
-          top: -12px;
         }
         .turn-label {
           font-size: 14px;
@@ -5681,17 +5686,17 @@
           { bottom: "55px", left: "calc(50% + 60px)" },
           { left: "120px", top: "calc(40% + 40px)" },
           { left: "calc(15% + 70px)", top: "45px" },
+          { left: "50%", top: "45px", transform: "translateX(-50%)" },
           { right: "calc(15% + 70px)", top: "45px" },
           { right: "120px", top: "calc(40% + 40px)" },
-          { left: "50%", top: "45px", transform: "translateX(-50%)" },
         ];
         const dpMobile = [
           { bottom: "55px", left: "calc(50% + 50px)" },
           { left: "80px", top: "calc(40% + 30px)" },
           { left: "calc(10% + 50px)", top: "30px" },
+          { left: "50%", top: "30px", transform: "translateX(-50%)" },
           { right: "calc(10% + 50px)", top: "30px" },
           { right: "80px", top: "calc(40% + 30px)" },
-          { left: "50%", top: "30px", transform: "translateX(-50%)" },
         ];
         const dp = isMobile ? dpMobile : dpDesktop;
         Object.assign(dBtn.style, dp[state.dealerIdx] || dp[0]);
