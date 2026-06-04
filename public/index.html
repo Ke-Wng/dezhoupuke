@@ -3289,6 +3289,30 @@
       .action-log-toggle .log-dot.active {
         display: inline-block;
       }
+      .scoreboard-toggle {
+        position: fixed;
+        top: 92px;
+        right: 16px;
+        z-index: 60;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 6px 14px;
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1;
+        transition: all 0.3s;
+        backdrop-filter: blur(8px);
+        display: none;
+      }
+      .scoreboard-toggle.visible {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .scoreboard-toggle:hover {
+        border-color: var(--gold-dim);
+      }
       @keyframes logDotPulse {
         0%,
         100% {
@@ -3319,6 +3343,59 @@
       }
       .action-log-panel.open {
         display: flex;
+      }
+      .scoreboard-panel {
+        position: fixed;
+        top: 120px;
+        right: 16px;
+        width: 260px;
+        max-height: 50vh;
+        z-index: 56;
+        background: rgba(8, 8, 8, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        backdrop-filter: blur(12px);
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      }
+      .scoreboard-panel.open {
+        display: flex;
+      }
+      .scoreboard-body {
+        padding: 8px 0;
+      }
+      .score-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 14px;
+        font-size: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      }
+      .score-row:last-child {
+        border-bottom: none;
+      }
+      .score-name {
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .score-value {
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 700;
+      }
+      .score-value.positive {
+        color: #60d080;
+      }
+      .score-value.negative {
+        color: var(--red);
+      }
+      .score-value.zero {
+        color: #888;
       }
 
       .action-log-header {
@@ -3488,6 +3565,17 @@
           right: 8px;
           padding: 4px 10px;
           font-size: 12px;
+        }
+        .scoreboard-toggle {
+          top: 76px;
+          right: 8px;
+          padding: 4px 10px;
+          font-size: 12px;
+        }
+        .scoreboard-panel {
+          top: 102px;
+          right: 8px;
+          width: min(78vw, 240px);
         }
         .log-entry {
           padding: 3px 10px;
@@ -3886,6 +3974,20 @@
         <div class="action-log-empty">等待牌局开始...</div>
       </div>
       <div class="log-result-bar" id="logResultBar" style="display: none"></div>
+    </div>
+
+    <!-- Scoreboard Panel -->
+    <button class="scoreboard-toggle" id="scoreboardToggle">
+      <span>&#128290;</span>
+    </button>
+    <div class="scoreboard-panel" id="scoreboardPanel">
+      <div class="action-log-header">
+        <div class="action-log-title">&#35745;&#20998;&#26495;</div>
+        <button class="action-log-close" id="scoreboardClose">×</button>
+      </div>
+      <div class="scoreboard-body" id="scoreboardBody">
+        <div class="action-log-empty">&#26242;&#26080;&#35760;&#24405;</div>
+      </div>
     </div>
 
     <!-- ===== LEADERBOARD OVERLAY ===== -->
@@ -5192,6 +5294,32 @@
       $("actionLogClose").addEventListener("click", () => {
         $("actionLogPanel").classList.remove("open");
       });
+      $("scoreboardToggle").addEventListener("click", () => {
+        $("scoreboardPanel").classList.toggle("open");
+      });
+      $("scoreboardClose").addEventListener("click", () => {
+        $("scoreboardPanel").classList.remove("open");
+      });
+
+      function renderScoreboard(scores = []) {
+        const body = $("scoreboardBody");
+        if (!body) return;
+        if (!scores.length) {
+          body.innerHTML =
+            '<div class="action-log-empty">&#26242;&#26080;&#35760;&#24405;</div>';
+          return;
+        }
+        body.innerHTML = "";
+        for (const s of scores) {
+          const row = document.createElement("div");
+          row.className = "score-row";
+          const score = Number(s.score || 0);
+          const cls = score > 0 ? "positive" : score < 0 ? "negative" : "zero";
+          row.innerHTML = `<span class="score-name"></span><span class="score-value ${cls}">${score > 0 ? "+" : ""}${score}</span>`;
+          row.querySelector(".score-name").textContent = s.name || "";
+          body.appendChild(row);
+        }
+      }
 
       function renderGame(state) {
         gameState = state;
@@ -5767,6 +5895,7 @@
         roomCode = d.code;
         $("roomCodeDisplay").textContent = d.code;
         isHost = d.hostId === Net.playerId;
+        $("scoreboardToggle").classList.toggle("visible", !!d.gameRunning);
       });
 
       Net.on("room:players", (d) => {
@@ -5806,6 +5935,9 @@
 
         $("startGameBtn").style.display = isHost ? "" : "none";
       });
+      Net.on("room:scoreboard", (d) => {
+        renderScoreboard(d.scores || []);
+      });
 
       Net.on("room:playerJoined", () => toast("新玩家加入"));
       Net.on("room:playerLeft", (d) => toast(`${d.name} 离开了`));
@@ -5819,6 +5951,7 @@
       Net.on("room:gameStarted", () => {
         showScreen("table");
         hideActions();
+        $("scoreboardToggle").classList.add("visible");
         if (isSpectator) $("spectatorBadge").classList.add("visible");
       });
 
@@ -5906,6 +6039,8 @@
       Net.on("room:left", () => {
         $("actionLogToggle").classList.remove("visible");
         $("actionLogPanel").classList.remove("open");
+        $("scoreboardToggle").classList.remove("visible");
+        $("scoreboardPanel").classList.remove("open");
         myReady = false;
         $("readyBtn").textContent = "准备";
         $("readyBtn").className = "btn btn-green";
@@ -5918,6 +6053,8 @@
       Net.on("room:destroyed", () => {
         $("actionLogToggle").classList.remove("visible");
         $("actionLogPanel").classList.remove("open");
+        $("scoreboardToggle").classList.remove("visible");
+        $("scoreboardPanel").classList.remove("open");
         myReady = false;
         $("readyBtn").textContent = "准备";
         $("readyBtn").className = "btn btn-green";
@@ -5953,6 +6090,7 @@
         // Action log
         clearActionLog();
         $("actionLogToggle").classList.add("visible");
+        $("scoreboardToggle").classList.add("visible");
       });
 
       Net.on("game:showdown", (d) => {
@@ -6223,6 +6361,8 @@
         hideActions();
         $("actionLogToggle").classList.remove("visible");
         $("actionLogPanel").classList.remove("open");
+        $("scoreboardToggle").classList.remove("visible");
+        $("scoreboardPanel").classList.remove("open");
         myReady = false;
         $("readyBtn").textContent = "准备";
         $("readyBtn").className = "btn btn-green";

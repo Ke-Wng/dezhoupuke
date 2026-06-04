@@ -25,6 +25,8 @@ class Room {
     this.game = null;
     this.gameRunning = false;
     this.handNum = 0;
+    this.scoreboard = new Map();
+    this.handStartStacks = new Map();
     this.autoStartTimer = null;
     this.nextHandTimer = null;
     this.lastVacantAt = null;
@@ -50,6 +52,11 @@ class Room {
       avatar: ws._playerAvatar || 'A',
       avatarColor: ws._playerColor || null,
     });
+    if (!this.scoreboard.has(id)) {
+      this.scoreboard.set(id, { id, name, score: 0 });
+    } else {
+      this.scoreboard.get(id).name = name;
+    }
 
     this.broadcast('room:playerJoined', {
       playerId: id,
@@ -64,6 +71,7 @@ class Room {
     }));
 
     this.broadcastPlayerList();
+    this.broadcastScoreboard();
     return true;
   }
 
@@ -81,6 +89,7 @@ class Room {
       spec._username = ws._username || spec._username || null;
       this.sendSpectatorState(id, ws);
       this.broadcastPlayerList();
+      this.broadcastScoreboard();
       return true;
     }
 
@@ -99,6 +108,7 @@ class Room {
     });
     this.broadcastPlayerList();
     this.sendSpectatorState(id, ws);
+    this.broadcastScoreboard();
     return true;
   }
 
@@ -213,6 +223,7 @@ class Room {
       data: { code: this.code, hostId: this.hostId, gameRunning: this.gameRunning },
     }));
     this.broadcastPlayerList();
+    this.broadcastScoreboard();
 
     if (this.game && this.gameRunning) {
       this.game.handleReconnect(id, ws);
@@ -315,10 +326,19 @@ class Room {
     this.game.onGameEnd = () => {
       for (const gp of this.game.players) {
         const rp = this.players.get(gp.id);
+        const startStack = this.handStartStacks.get(gp.id) ?? this.startStack;
+        const delta = gp.stack - startStack;
+        if (!this.scoreboard.has(gp.id)) {
+          this.scoreboard.set(gp.id, { id: gp.id, name: gp.name, score: 0 });
+        }
+        const score = this.scoreboard.get(gp.id);
+        score.name = gp.name;
+        score.score += delta;
         if (rp) rp.stack = gp.stack;
       }
       this.handNum = this.game.handNum;
       this.gameRunning = false;
+      this.broadcastScoreboard();
 
       if (this.game.winners.length > 0 && this.onStatsReport) {
         this.onStatsReport(this.game);
@@ -334,8 +354,10 @@ class Room {
       const rp = this.players.get(gp.id);
       if (rp) gp._ws = rp.ws;
     }
+    this.handStartStacks = new Map(this.game.players.map((p) => [p.id, p.stack]));
 
     this.broadcast('room:gameStarted', {});
+    this.broadcastScoreboard();
     this.game.startHand();
   }
 
@@ -377,6 +399,16 @@ class Room {
       name: s.name,
     }));
     this.broadcast('room:players', { players, spectators, hostId: this.hostId });
+  }
+
+  getScoreboard() {
+    return [...this.scoreboard.values()]
+      .map((s) => ({ ...s }))
+      .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  }
+
+  broadcastScoreboard() {
+    this.broadcast('room:scoreboard', { scores: this.getScoreboard() });
   }
 
   _markVacantIfNeeded() {
