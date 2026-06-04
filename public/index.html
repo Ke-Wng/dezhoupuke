@@ -2452,21 +2452,6 @@ function renderGame(state) {
   if (isMyTurn) turnLabel.classList.add('visible');
   else turnLabel.classList.remove('visible');
 
-  // Fallback: if it's my turn but action panel not showing, show it from game state
-  if (isMyTurn && me_ && !$('actionPanel').classList.contains('active') && state.phase !== 'showdown' && state.phase !== 'idle') {
-    const toCall = (state.roundBet || 0) - (me_.bet || 0);
-    showActions({
-      playerId: Net.playerId,
-      toCall: Math.max(0, toCall),
-      minRaise: (state.roundBet || 0) + 20, // approximate
-      maxRaise: me_.stack + me_.bet,
-      pot: state.pot,
-      gameMode: state.gameMode || 'classic',
-      allInOrFold: false,
-    });
-    SFX.yourTurn();
-  }
-
   const me = state.players.find(p => p.id === Net.playerId);
   // Detect if my hand cards actually changed (new deal vs re-render)
   const currentHandIds = me?.hand?.filter(c => c).map(c => c.suit + '-' + c.rank).join(',') || '';

@@ -603,17 +603,18 @@ class Game {
       return;
     }
 
-    gameLogger.logPhaseChange(this, this.phase);
-    this.broadcastState();
-
     const canAct = this.canActPlayers();
     if (canAct.length <= 1) {
+      gameLogger.logPhaseChange(this, this.phase);
+      this.broadcastState();
       setTimeout(() => this.advancePhase(), 1000);
       return;
     }
 
     // Post-flop: start from small blind position (or next active if SB folded)
     this.currentIdx = this.nextIdx(this.dealerIdx);
+    gameLogger.logPhaseChange(this, this.phase);
+    this.broadcastState();
     setTimeout(() => this.processNextAction(), 1000);
   }
 
