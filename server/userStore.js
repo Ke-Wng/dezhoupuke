@@ -1,5 +1,5 @@
 /**
- * User Store — JSON file-based persistence for user accounts, stats, and achievements
+ * User Store 鈥?JSON file-based persistence for user accounts, stats, and achievements
  * Supports registered users and guest players
  */
 
@@ -9,39 +9,28 @@ const crypto = require('crypto');
 
 const DATA_FILE = path.join(__dirname, '..', 'data', 'users.json');
 
-// ===== Daily Check-in Rewards (by consecutive streak) =====
-const CHECKIN_REWARDS = [
-  { day: 1, chips: 50,  label: '第1天' },
-  { day: 2, chips: 80,  label: '第2天' },
-  { day: 3, chips: 100, label: '第3天' },
-  { day: 4, chips: 150, label: '第4天' },
-  { day: 5, chips: 200, label: '第5天' },
-  { day: 6, chips: 300, label: '第6天' },
-  { day: 7, chips: 500, label: '第7天 (满勤!)' },
-];
-
 // ===== Achievement Definitions =====
 const ACHIEVEMENTS = {
-  first_win:       { name: '初次胜利', desc: '赢得第一手牌', icon: '🏆' },
-  ten_wins:        { name: '十胜将军', desc: '累计赢得10手牌', icon: '🎖️' },
-  fifty_wins:      { name: '半百英雄', desc: '累计赢得50手牌', icon: '⭐' },
-  hundred_wins:    { name: '百战百胜', desc: '累计赢得100手牌', icon: '💎' },
-  royal_flush:     { name: '皇家降临', desc: '获得皇家同花顺', icon: '👑' },
-  straight_flush:  { name: '同花顺子', desc: '获得同花顺', icon: '🌟' },
-  four_kind:       { name: '四条天王', desc: '获得四条', icon: '🔥' },
-  full_house:      { name: '葫芦娃', desc: '获得葫芦', icon: '🏠' },
-  flush:           { name: '同花达人', desc: '获得同花', icon: '♠' },
-  all_in_5:        { name: '全押狂人', desc: '累计All-in 5次', icon: '💰' },
-  all_in_20:       { name: '赌神附体', desc: '累计All-in 20次', icon: '🎰' },
-  big_pot:         { name: '大赢家', desc: '赢得超过500筹码的底池', icon: '💵' },
-  huge_pot:        { name: '超级赢家', desc: '赢得超过2000筹码的底池', icon: '🤑' },
-  play_50:         { name: '身经百战', desc: '累计打满50手牌', icon: '📊' },
-  play_200:        { name: '牌桌老手', desc: '累计打满200手牌', icon: '🎓' },
-  win_streak_3:    { name: '三连胜', desc: '连续赢得3手牌', icon: '🔥' },
-  win_streak_5:    { name: '五连胜', desc: '连续赢得5手牌', icon: '⚡' },
-  comeback:        { name: '绝地翻盘', desc: '筹码低于500时赢回超过1000', icon: '🔄' },
-  bluff_master:    { name: '诈唬大师', desc: '用高牌赢下一手', icon: '🎭' },
-  first_game:      { name: '初入江湖', desc: '完成第一局游戏', icon: '🃏' },
+  first_win:       { name: 'First Win', desc: 'Win your first hand', icon: 'WIN' },
+  ten_wins:        { name: 'Ten Wins', desc: 'Win 10 hands', icon: '10W' },
+  fifty_wins:      { name: 'Fifty Wins', desc: 'Win 50 hands', icon: '50W' },
+  hundred_wins:    { name: 'Hundred Wins', desc: 'Win 100 hands', icon: '100W' },
+  royal_flush:     { name: 'Royal Flush', desc: 'Make a royal flush', icon: 'RF' },
+  straight_flush:  { name: 'Straight Flush', desc: 'Make a straight flush', icon: 'SF' },
+  four_kind:       { name: 'Four of a Kind', desc: 'Make four of a kind', icon: '4K' },
+  full_house:      { name: 'Full House', desc: 'Make a full house', icon: 'FH' },
+  flush:           { name: 'Flush', desc: 'Make a flush', icon: 'FL' },
+  all_in_5:        { name: 'All-in x5', desc: 'Go all-in 5 times', icon: 'A5' },
+  all_in_20:       { name: 'All-in x20', desc: 'Go all-in 20 times', icon: 'A20' },
+  big_pot:         { name: 'Big Pot', desc: 'Win a pot over 500', icon: 'P500' },
+  huge_pot:        { name: 'Huge Pot', desc: 'Win a pot over 2000', icon: 'P2K' },
+  play_50:         { name: 'Play 50', desc: 'Play 50 hands', icon: 'G50' },
+  play_200:        { name: 'Play 200', desc: 'Play 200 hands', icon: 'G200' },
+  win_streak_3:    { name: 'Win Streak 3', desc: 'Win 3 hands in a row', icon: 'S3' },
+  win_streak_5:    { name: 'Win Streak 5', desc: 'Win 5 hands in a row', icon: 'S5' },
+  comeback:        { name: 'Comeback', desc: 'Win back over 1000 from under 500', icon: 'CB' },
+  bluff_master:    { name: 'Bluff Master', desc: 'Win with high card', icon: 'BM' },
+  first_game:      { name: 'First Game', desc: 'Finish your first game', icon: 'G1' },
 };
 
 class UserStore {
@@ -91,13 +80,13 @@ class UserStore {
   register(username, password) {
     username = (username || '').trim();
     if (!username || username.length < 1 || username.length > 12) {
-      return { error: '昵称需要1-12个字符' };
+      return { error: 'Username must be 1-12 characters' };
     }
     if (!password || password.length < 4) {
-      return { error: '密码至少4个字符' };
+      return { error: 'Password must be at least 4 characters' };
     }
     if (this.users.has(username)) {
-      return { error: '该昵称已被注册' };
+      return { error: 'Username already registered' };
     }
 
     const user = {
@@ -105,11 +94,7 @@ class UserStore {
       passwordHash: this._hashPassword(password),
       createdAt: Date.now(),
       lastLogin: Date.now(),
-      chips: 1000,  // Starting chips
-      lastCheckin: null,  // Date string "YYYY-MM-DD"
-      checkinStreak: 0,
-      checkinHistory: [],  // Array of date strings
-      avatar: '🦊',  // Selected avatar emoji
+      avatar: 'A',  // Selected avatar emoji
       avatarColor: '#4fc3f7',  // Selected color
       stats: {
         handsPlayed: 0,
@@ -140,9 +125,9 @@ class UserStore {
   login(username, password) {
     username = (username || '').trim();
     const user = this.users.get(username);
-    if (!user) return { error: '用户不存在' };
+    if (!user) return { error: 'User not found' };
     if (user.passwordHash !== this._hashPassword(password)) {
-      return { error: '密码错误' };
+      return { error: 'Incorrect password' };
     }
 
     user.lastLogin = Date.now();
@@ -168,7 +153,7 @@ class UserStore {
     const id = 'guest_' + crypto.randomBytes(4).toString('hex');
     const guest = {
       id,
-      name: (name || '游客').slice(0, 12),
+      name: (name || 'Guest').slice(0, 12),
       isGuest: true,
       stats: {
         handsPlayed: 0, handsWon: 0, totalWon: 0,
@@ -216,96 +201,6 @@ class UserStore {
     return { newAchievements, profile: this._sanitize(user) };
   }
 
-  // ===== Daily Check-in =====
-  checkin(username) {
-    const user = this.users.get(username);
-    if (!user) return { error: '用户不存在' };
-
-    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
-    const lastCheckin = user.lastCheckin || '';
-
-    if (lastCheckin === today) {
-      return { error: '今天已经签到过了', alreadyCheckedIn: true, streak: user.checkinStreak || 0 };
-    }
-
-    // Calculate streak
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    let streak = 0;
-    if (lastCheckin === yesterday) {
-      streak = (user.checkinStreak || 0) + 1;
-    } else if (lastCheckin !== today) {
-      streak = 1; // Reset streak if missed a day
-    }
-    if (streak > 7) streak = ((streak - 1) % 7) + 1; // Cycle through 7-day rewards
-
-    // Get reward
-    const reward = CHECKIN_REWARDS[Math.min(streak - 1, CHECKIN_REWARDS.length - 1)];
-
-    // Apply
-    user.chips = (user.chips || 1000) + reward.chips;
-    user.lastCheckin = today;
-    user.checkinStreak = streak;
-    if (!user.checkinHistory) user.checkinHistory = [];
-    user.checkinHistory.push(today);
-    if (user.checkinHistory.length > 90) user.checkinHistory = user.checkinHistory.slice(-90); // Keep 90 days
-
-    this._save();
-
-    return {
-      success: true,
-      streak,
-      reward: reward.chips,
-      rewardLabel: reward.label,
-      totalChips: user.chips,
-      // Last 7 days for calendar display
-      recentDays: CHECKIN_REWARDS.map((r, i) => ({
-        day: r.day,
-        chips: r.chips,
-        label: r.label,
-        completed: i < streak,
-        current: i === streak - 1,
-      })),
-    };
-  }
-
-  // ===== Get Check-in Info (without performing checkin) =====
-  getCheckinInfo(username) {
-    const user = this.users.get(username);
-    if (!user) return null;
-
-    const today = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    const lastCheckin = user.lastCheckin || '';
-    const alreadyCheckedIn = lastCheckin === today;
-
-    let nextStreak = (user.checkinStreak || 0);
-    if (lastCheckin === yesterday && !alreadyCheckedIn) nextStreak++;
-    else if (!alreadyCheckedIn) nextStreak = 1;
-    if (nextStreak > 7) nextStreak = ((nextStreak - 1) % 7) + 1;
-
-    return {
-      alreadyCheckedIn,
-      streak: user.checkinStreak || 0,
-      chips: user.chips || 1000,
-      lastCheckin,
-      recentDays: CHECKIN_REWARDS.map((r, i) => ({
-        day: r.day,
-        chips: r.chips,
-        label: r.label,
-        completed: alreadyCheckedIn ? i < (user.checkinStreak || 0) : false,
-        current: alreadyCheckedIn ? i === (user.checkinStreak || 0) - 1 : false,
-      })),
-    };
-  }
-
-  // ===== Add/Remove Chips =====
-  adjustChips(username, amount) {
-    const user = this.users.get(username);
-    if (!user) return false;
-    user.chips = Math.max(0, (user.chips || 1000) + amount);
-    this._save();
-    return user.chips;
-  }
 
   // ===== Update Avatar =====
   updateAvatar(username, avatar, color) {
@@ -401,10 +296,7 @@ class UserStore {
       username: user.username,
       createdAt: user.createdAt,
       lastLogin: user.lastLogin,
-      chips: user.chips || 1000,
-      lastCheckin: user.lastCheckin || null,
-      checkinStreak: user.checkinStreak || 0,
-      avatar: user.avatar || '🦊',
+      avatar: user.avatar || 'A',
       avatarColor: user.avatarColor || '#4fc3f7',
       stats: { ...user.stats },
       achievements: user.achievements.map(id => ({ id, ...ACHIEVEMENTS[id] })),

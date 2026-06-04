@@ -29,7 +29,6 @@ class GameLogger {
       players: game.players.map(p => ({
         id: p.id, name: p.name, seatIdx: p.seatIdx,
         stack: p.stack + p.bet, // original stack before blind
-        isBot: p.isBot, botStyle: p.botStyle,
       })),
       hands: {},    // player id → [card1, card2]
       actions: [],  // chronological action log

@@ -322,26 +322,6 @@ wss.on('connection', (ws) => {
         break;
       }
 
-      // ===== User: Daily Check-in =====
-      case 'user:checkin': {
-        if (!currentUser) {
-          ws.send(JSON.stringify({ type: 'user:error', data: { message: '请先登录' } }));
-          break;
-        }
-        const checkinResult = userStore.checkin(currentUser.username);
-        ws.send(JSON.stringify({ type: 'user:checkin', data: checkinResult }));
-        break;
-      }
-
-      // ===== User: Check-in Info =====
-      case 'user:checkinInfo': {
-        if (!currentUser) break;
-        const info = userStore.getCheckinInfo(currentUser.username);
-        if (info) {
-          ws.send(JSON.stringify({ type: 'user:checkinInfo', data: info }));
-        }
-        break;
-      }
 
       // ===== User: Set Avatar =====
       case 'user:setAvatar': {
@@ -494,60 +474,6 @@ wss.on('connection', (ws) => {
         break;
       }
 
-      // ===== Room: Bot Game =====
-      case 'room:botGame': {
-        if (!playerId) { ws.send(JSON.stringify({ type: 'error', data: { message: '请先认证' } })); break; }
-
-        if (currentRoom) registry.leaveRoom(playerId);
-
-        const name = data.name || ws.playerName;
-        const difficulty = data.difficulty || 'medium';
-        const options = {};
-
-        // Apply game mode to bot games too
-        if (data.gameMode === 'turbo') {
-          options.sb = 20; options.bb = 40; options.startStack = 1500;
-        } else if (data.gameMode === 'shortdeck') {
-          options.sb = 10; options.bb = 20; options.startStack = 2000;
-          options.shortDeck = true;
-        }
-
-        const room = registry.createRoom(playerId, name, ws, options);
-        currentRoom = room;
-
-        if (currentUser) {
-          const rp = room.players.get(playerId);
-          if (rp) rp._username = currentUser.username;
-        }
-
-        wireStatsReporting(room, ws);
-
-        ws.send(JSON.stringify({ type: 'room:created', data: { code: room.code, isBotGame: true } }));
-        room.broadcastPlayerList();
-
-        // Bot presets by difficulty
-        const botConfigs = {
-          easy: [
-            { id: crypto.randomUUID(), name: '小萌', style: 'lap' },
-            { id: crypto.randomUUID(), name: '阿呆', style: 'rock' },
-            { id: crypto.randomUUID(), name: '菜鸟', style: 'lap' },
-          ],
-          medium: [
-            { id: crypto.randomUUID(), name: '老张', style: 'tag' },
-            { id: crypto.randomUUID(), name: '小李', style: 'lap' },
-            { id: crypto.randomUUID(), name: '王哥', style: 'rock' },
-          ],
-          hard: [
-            { id: crypto.randomUUID(), name: '赌神', style: 'tag' },
-            { id: crypto.randomUUID(), name: '狂人', style: 'maniac' },
-            { id: crypto.randomUUID(), name: '铁壁', style: 'tag' },
-          ],
-        };
-
-        const bots = botConfigs[difficulty] || botConfigs.medium;
-        room.startBotGame(bots);
-        break;
-      }
 
       // ===== Room: Ready =====
       case 'room:ready': {

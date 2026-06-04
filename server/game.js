@@ -121,8 +121,6 @@ class Game {
       allIn: false,
       lastAction: '',
       connected: p.connected !== false,
-      isBot: !!p.isBot,
-      botStyle: p.botStyle || null,
       _username: p._username || null,
       avatar: p.avatar || '🦊',
       avatarColor: p.avatarColor || null,
@@ -299,139 +297,6 @@ class Game {
     }
   }
 
-  // ===== Bot AI Decision =====
-  botDecide(player) {
-    const toCall = this.roundBet - player.bet;
-    const style = player.botStyle || 'tag';
-    const hand = player.hand;
-    const community = this.community;
-    const activeCount = this.inHandPlayers().length;
-    const bb = this.bb;
-
-    // Estimate hand strength via Monte Carlo simulation
-    let strength = 0;
-    if (community.length >= 3) {
-      strength = this._simulateHandStrength(hand, community, activeCount, 80);
-    } else {
-      strength = this._ratePreflopHand(hand);
-    }
-
-    // Random factor for unpredictability
-    const noise = (Math.random() - 0.5) * 0.12;
-    const adj = Math.max(0, Math.min(1, strength + noise));
-
-    let action, amount;
-
-    switch (style) {
-      case 'tag': // Tight-Aggressive
-        if (adj > 0.82) { action = 'raise'; amount = Math.min(this.pot, player.stack); }
-        else if (adj > 0.6) { action = toCall === 0 ? 'check' : 'call'; }
-        else if (adj > 0.42 && toCall <= bb * 3) { action = toCall === 0 ? 'check' : 'call'; }
-        else if (toCall === 0) { action = 'check'; }
-        else { action = 'fold'; }
-        break;
-
-      case 'lap': // Loose-Passive (Calling Station)
-        if (adj > 0.9 && Math.random() < 0.25) { action = 'raise'; amount = Math.min(this.pot, player.stack); }
-        else if (adj > 0.28 || toCall <= bb * 2) { action = toCall === 0 ? 'check' : 'call'; }
-        else if (toCall === 0) { action = 'check'; }
-        else { action = 'fold'; }
-        break;
-
-      case 'maniac': // Loose-Aggressive
-        if (adj > 0.45 || Math.random() < 0.28) {
-          action = 'raise';
-          amount = Math.min(Math.floor(this.pot * (1.5 + Math.random())), player.stack);
-          if (adj > 0.75 && Math.random() < 0.12) action = 'allin';
-        } else if (toCall === 0) { action = 'check'; }
-        else if (adj > 0.2) { action = 'call'; }
-        else { action = 'fold'; }
-        break;
-
-      case 'rock': // Tight-Passive
-        if (adj > 0.85) { action = toCall === 0 ? 'check' : 'call'; }
-        else if (adj > 0.5 && toCall <= bb * 2) { action = toCall === 0 ? 'check' : 'call'; }
-        else if (toCall === 0) { action = 'check'; }
-        else { action = 'fold'; }
-        break;
-
-      default:
-        action = toCall === 0 ? 'check' : 'fold';
-    }
-
-    // Safety checks
-    if (action === 'call' && toCall === 0) action = 'check';
-    if (action === 'call' && toCall >= player.stack) action = 'allin';
-    if (action === 'raise') {
-      amount = Math.max(amount || 0, this.roundBet + this.minRaise);
-      if (amount >= player.stack + player.bet) action = 'allin';
-    }
-
-    const delay = 800 + Math.random() * 1400;
-    this.actionTimeout = setTimeout(() => {
-      this.actionTimeout = null;
-      // All-in-or-fold mode: bots can only fold, check, or allin
-      if (this.allInOrFold) {
-        if (action === 'call' || action === 'raise') {
-          this.handleAction(player.id, { action: 'allin' });
-          return;
-        }
-      }
-      this.handleAction(player.id, { action, amount });
-    }, delay);
-  }
-
-  // Monte Carlo hand strength estimation
-  _simulateHandStrength(hand, community, numOpponents, iterations) {
-    const known = [...hand, ...community];
-    const remaining = [];
-    for (let s = 0; s < 4; s++)
-      for (let r = 0; r < 13; r++)
-        if (!known.some(c => c.suit === s && c.rank === r))
-          remaining.push({ suit: s, rank: r, rankStr: RANKS[r], suitStr: SUITS[s] });
-
-    let wins = 0, total = 0;
-    const needed = 5 - community.length;
-
-    for (let i = 0; i < iterations; i++) {
-      const deck = shuffle([...remaining]);
-      let di = 0;
-      const fullComm = [...community];
-      for (let j = 0; j < needed; j++) fullComm.push(deck[di++]);
-
-      const myEval = evaluateHand([...hand, ...fullComm]);
-      let best = true;
-      for (let o = 0; o < numOpponents - 1; o++) {
-        const oppHand = [deck[di++], deck[di++]];
-        const oppEval = evaluateHand([...oppHand, ...fullComm]);
-        if (compareEval(oppEval, myEval) > 0) { best = false; break; }
-      }
-      if (best) wins++;
-      total++;
-    }
-    return total > 0 ? wins / total : 0;
-  }
-
-  // Simple preflop hand rating (0-1 scale)
-  _ratePreflopHand(hand) {
-    const r1 = RANK_VALUES[hand[0].rankStr];
-    const r2 = RANK_VALUES[hand[1].rankStr];
-    const high = Math.max(r1, r2);
-    const low = Math.min(r1, r2);
-    const suited = hand[0].suit === hand[1].suit;
-    const pair = r1 === r2;
-
-    let score = 0;
-    if (pair) score = 0.5 + (high / 14) * 0.4;
-    else {
-      score = (high + low) / 28 * 0.55;
-      if (suited) score += 0.08;
-      if (high - low <= 2) score += 0.06;
-      if (high >= 12 && low >= 10) score += 0.12;
-      if (high === 14 && low >= 10) score += 0.1;
-    }
-    return Math.min(1, Math.max(0, score));
-  }
 
   scheduleNextAction() {
     this.actionTimeout = setTimeout(() => this.processNextAction(), 500);
@@ -452,11 +317,6 @@ class Game {
       return;
     }
 
-    // Bot players decide automatically
-    if (player.isBot) {
-      this.botDecide(player);
-      return;
-    }
 
     // Request action from human player
     const toCall = this.roundBet - player.bet;

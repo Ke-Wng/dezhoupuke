@@ -5,11 +5,6 @@
 const { Game, START_STACK } = require('./game');
 const crypto = require('crypto');
 
-// ===== Bot WebSocket Mock =====
-class BotSocket {
-  constructor() { this.readyState = 1; }
-  send() { /* bots don't need to receive messages */ }
-}
 
 class Room {
   constructor(code, hostId, hostName, hostWs, options = {}) {
@@ -74,27 +69,6 @@ class Room {
     return true;
   }
 
-  addBot(id, name, style) {
-    if (this.players.size >= this.maxPlayers) return false;
-    const botWs = new BotSocket();
-    this.players.set(id, {
-      id, name, ws: botWs,
-      stack: this.startStack,
-      ready: true,
-      connected: true,
-      isBot: true,
-      botStyle: style,
-    });
-
-    this.broadcast('room:playerJoined', {
-      playerId: id, name,
-      playerCount: this.players.size,
-      maxPlayers: this.maxPlayers,
-      isBot: true,
-    });
-    this.broadcastPlayerList();
-    return true;
-  }
 
   addSpectator(id, name, ws) {
     if (this.spectators.has(id)) {
@@ -139,7 +113,6 @@ class Room {
     // Send player list
     const players = [...this.players.values()].map(p => ({
       id: p.id, name: p.name, stack: p.stack, ready: p.ready, connected: p.connected,
-      isBot: !!p.isBot, botStyle: p.botStyle || null,
       avatar: p.avatar || '🦊', avatarColor: p.avatarColor || null,
     }));
     const spectators = [...this.spectators.values()].map(s => ({ id: s.id, name: s.name }));
@@ -246,8 +219,7 @@ class Room {
       name: p.name,
       stack: p.stack,
       connected: true,
-      isBot: !!p.isBot,
-      botStyle: p.botStyle || null,
+     
       _username: p._username || null,
       avatar: p.avatar || '🦊',
       avatarColor: p.avatarColor || null,
@@ -314,14 +286,6 @@ class Room {
     this.game.startHand();
   }
 
-  startBotGame(bots) {
-    // Add bots to room
-    for (const bot of bots) {
-      this.addBot(bot.id, bot.name, bot.style);
-    }
-    // Auto-start (host starts)
-    setTimeout(() => this.startGame(this.hostId), 800);
-  }
 
   handlePlayerAction(playerId, actionData) {
     if (!this.game || !this.gameRunning) return;
@@ -351,7 +315,6 @@ class Room {
   broadcastPlayerList() {
     const players = [...this.players.values()].map(p => ({
       id: p.id, name: p.name, stack: p.stack, ready: p.ready, connected: p.connected,
-      isBot: !!p.isBot, botStyle: p.botStyle || null,
       avatar: p.avatar || '🦊', avatarColor: p.avatarColor || null,
     }));
     const spectators = [...this.spectators.values()].map(s => ({
@@ -462,7 +425,6 @@ class RoomRegistry {
 
   getRoomList() {
     return [...this.rooms.values()].map(r => {
-      const botCount = [...r.players.values()].filter(p => p.isBot).length;
       return {
         code: r.code,
         playerCount: r.players.size,
@@ -470,8 +432,6 @@ class RoomRegistry {
         maxPlayers: r.maxPlayers,
         gameRunning: r.gameRunning,
         hostName: r.players.get(r.hostId)?.name || 'Unknown',
-        hasBots: botCount > 0,
-        botCount,
         gameMode: r.gameMode || 'classic',
       };
     });
